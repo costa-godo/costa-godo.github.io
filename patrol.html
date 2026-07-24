@@ -187,6 +187,7 @@
   .tag.t3{ background:#EDE8FB; color:#6B4FC4; }
   .tag.t4{ background:transparent; color:var(--ink-2); border:1px dashed #B8BEC9; }
   .tag.t5{ background:#E2F3EC; color:#1F7A4D; }
+  .tag.t6{ background:#FDECEF; color:#C23B6B; }
 
   /* ===== 온습도 입력 ===== */
   .env-row{
@@ -398,6 +399,9 @@
   <button class="tab-btn" data-tower="2" onclick="setTower(2)">
     야간 당직<span class="n" id="tabCountN">0/0</span>
   </button>
+  <button class="tab-btn" data-tower="3" onclick="setTower(3)">
+    금요일 업무<span class="n" id="tabCountF">0/0</span>
+  </button>
 </div>
 
 <div class="toolbar">
@@ -570,6 +574,21 @@ const DATA = [
       { n:"B타워 중수처리조실", t:["4차"] },
     ]},
   ]},
+  { name:"금요일 업무", floors:[
+    { name:"금요일 주1 업무", items:[
+      { n:"정압지 확인 및 교체 (내일 근무자 예정)", t:["금요일"] },
+      { n:"세안수 교체 (순찰 돌기 전 물 빼놓기)", t:["금요일"] },
+      { n:"청관제 절반 확인", t:["금요일"] },
+      { n:"보일러 연도 응축수 물통 비우기", t:["금요일"] },
+      { n:"경수연화장치 전환 #1→#2 (3·4버튼 설정 - 2번 버튼)", t:["금요일"] },
+      { n:"중수처리실 오토스크린 청소", t:["금요일"] },
+      { n:"B동 1층 화장실 종균제 투입 (재고없으면 사진찍기, 재고 펜으로 기재 · 1개 10L씩 총 2개 사용)", t:["금요일"] },
+      { n:"경수연화장치 교번 시약측정 완료 (1→2)", t:["금요일"] },
+      { n:"펌프류 절체 (보일러 2개, DVM B동 1개 — 기동→정지→다른 펌프 기동)", t:["금요일"] },
+      { n:"냉각탑 온도설정 순차변경 (낮은 온도부터 순차적으로 냉각탑→DVM, 총 5개)", t:["금요일"] },
+      { n:"종균제 부적합 등록하고 재고 반영", t:["금요일"] },
+    ]},
+  ]},
 ];
 
 // ============ PIN DATA ============
@@ -603,7 +622,7 @@ function togglePins(){
 }
 
 // 태그 종류별 스타일 매핑 (1차/2차/3차/관례항목)
-const TAG_CLASS = { "1차":"t1", "2차":"t2", "3차":"t3", "4차":"t5", "관례항목":"t4" };
+const TAG_CLASS = { "1차":"t1", "2차":"t2", "3차":"t3", "4차":"t5", "관례항목":"t4", "금요일":"t6" };
 function tagClass(t){ return TAG_CLASS[t] || "t1"; }
 
 // assign stable ids + floor/tower reference (used for photo watermark)
@@ -953,6 +972,7 @@ function refreshAll(){
   document.getElementById("tabCountB").textContent = `${towerCounts[0].done}/${towerCounts[0].total}`;
   document.getElementById("tabCountA").textContent = `${towerCounts[1].done}/${towerCounts[1].total}`;
   document.getElementById("tabCountN").textContent = `${towerCounts[2].done}/${towerCounts[2].total}`;
+  document.getElementById("tabCountF").textContent = `${towerCounts[3].done}/${towerCounts[3].total}`;
 
   const chip = document.getElementById("issueChip");
   const tabbar = document.getElementById("tabbar");
