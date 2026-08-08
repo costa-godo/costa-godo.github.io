@@ -75,6 +75,26 @@
   .empty{text-align:center; color:var(--dim); font-size:13px; padding:34px 16px; line-height:1.8;}
 
   /* ===== 체중 입력 ===== */
+  /* ===== 칼로리 계산기 목표 카드 ===== */
+  .calc-card{background:linear-gradient(135deg,#1C1C1E,#2C2C2E); border:none; border-radius:16px;
+    padding:16px; margin-bottom:10px; color:#fff;}
+  .calc-top{display:flex; align-items:center; gap:8px; margin-bottom:2px;}
+  .calc-top .t{flex:1; font-size:12px; font-weight:700; color:rgba(255,255,255,.6);}
+  .calc-edit{flex:none; font-size:11.5px; font-weight:700; color:#fff;
+    background:rgba(255,255,255,.14); padding:5px 11px; border-radius:20px;}
+  .calc-kcal{font-size:30px; font-weight:800; font-family:var(--mono); letter-spacing:-.02em; margin:3px 0 12px;}
+  .calc-kcal small{font-size:14px; font-weight:600; color:rgba(255,255,255,.55); margin-left:3px;}
+  .calc-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .calc-grid div{background:rgba(255,255,255,.08); border-radius:11px; padding:8px 4px; text-align:center;}
+  .calc-grid b{display:block; font-family:var(--mono); font-size:14px; font-weight:800;}
+  .calc-grid span{display:block; font-size:10px; color:rgba(255,255,255,.55); margin-top:2px; font-weight:600;}
+  .calc-empty{display:flex; align-items:center; gap:12px; background:var(--surface);
+    border:.5px solid var(--border); border-radius:16px; padding:14px; margin-bottom:10px;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .calc-empty .ic{font-size:22px;}
+  .calc-empty .tx{flex:1; font-size:12.5px; color:var(--muted); line-height:1.5;}
+  .calc-empty button{flex:none; background:var(--acc); color:#fff; font-size:12.5px; font-weight:700;
+    padding:9px 14px; border-radius:11px;}
   .w-now{display:flex; align-items:baseline; gap:8px; margin-bottom:11px;}
   .w-now .big{font-size:30px; font-weight:800; font-family:var(--mono); letter-spacing:-.02em;}
   .w-now .delta{font-size:13px; font-weight:800;}
@@ -283,6 +303,7 @@
 
 <main>
   <div class="page on" id="p-today">
+    <div id="macroCard"></div>
     <div id="todayEditor"></div>
   </div>
 
@@ -963,6 +984,99 @@ async function ghPull(manual){
   }catch(err){ if(manual) toast('불러오기 실패 — 깃허브 설정 확인'); }
 }
 
+/* ================= 칼로리 계산기 =================
+   출처: SNS 트레이너 공식 — 칼로리=체중×23(웨이트 주4회+=25), 단백질=체중×2.2g,
+   지방=체중×0.7g, 탄수=(총칼로리-단백질·지방칼로리)÷4, 식이섬유=칼로리÷1000×14
+   1,300kcal 밑으로는 안 내려가게 하한선. 2주 굴려보고 체중 안 움직이면 재조정하라는
+   전제가 붙어 있어서, 계산기에도 그대로 남겨둠. */
+function calcMacros(weight, heavy){
+  const mult = heavy ? 25 : 23;
+  let kcal = Math.round(weight*mult);
+  const floored = kcal < 1300;
+  if(floored) kcal = 1300;
+  const protein = Math.round(weight*2.2);
+  const fat = Math.round(weight*0.7);
+  const carbs = Math.max(0, Math.round((kcal - protein*4 - fat*9)/4));
+  const fiber = Math.round(kcal/1000*14);
+  return {weight, heavy, mult, kcal, protein, fat, carbs, fiber, floored};
+}
+function renderMacroCard(){
+  const el=document.getElementById('macroCard');
+  const mt=prof.macroTarget;
+  if(!mt){
+    el.innerHTML=`<div class="calc-empty"><span class="ic">🔢</span>
+      <span class="tx">체중·단백질·지방·탄수 목표를 계산해서 여기 띄워둘 수 있어요.</span>
+      <button id="calcOpenBtn">계산하기</button></div>`;
+  } else {
+    el.innerHTML=`<div class="calc-card">
+      <div class="calc-top"><span class="t">오늘의 목표 · ${mt.weight}kg 기준${mt.floored?' · 하한선 적용':''}</span>
+        <button class="calc-edit" id="calcOpenBtn">수정</button></div>
+      <div class="calc-kcal">${mt.kcal.toLocaleString()}<small>kcal</small></div>
+      <div class="calc-grid">
+        <div><b>${mt.protein}g</b><span>단백질</span></div>
+        <div><b>${mt.fat}g</b><span>지방</span></div>
+        <div><b>${mt.carbs}g</b><span>탄수</span></div>
+        <div><b>${mt.fiber}g</b><span>식이섬유</span></div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('calcOpenBtn').onclick=calcSheet;
+}
+function calcSheet(){
+  const mt=prof.macroTarget;
+  const w0 = mt? mt.weight : (curW()!=null? curW() : (prof.start||''));
+  const heavy0 = mt? mt.heavy : false;
+  const ov=document.createElement('div'); ov.className='ov';
+  ov.innerHTML=`<div class="dlg">
+    <div class="dlg-t">칼로리 계산기</div>
+    <div class="fld" style="margin-bottom:12px"><label>체중 kg</label>
+      <input id="cW" type="number" inputmode="decimal" step="0.1" value="${w0}" placeholder="0.0"></div>
+    <label class="f" style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">웨이트 트레이닝 빈도</label>
+    <div class="segs" style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="seg" id="cHeavyNo" style="flex:1;padding:11px 4px;border-radius:11px;font-size:13px;font-weight:700;background:var(--raise);border:1.5px solid transparent;color:var(--muted)">주 4회 미만</button>
+      <button class="seg" id="cHeavyYes" style="flex:1;padding:11px 4px;border-radius:11px;font-size:13px;font-weight:700;background:var(--raise);border:1.5px solid transparent;color:var(--muted)">주 4회 이상</button>
+    </div>
+    <div id="cResult"></div>
+    <div style="font-size:11px;color:var(--dim);line-height:1.6;margin-top:12px">
+      지방·탄수는 먼저 깎는 자리가 아니라 채우는 자리예요. 이 숫자는 출발점이고,
+      2주 굴려보고 체중이 안 움직이면 그때 다시 조정하는 게 맞습니다.</div>
+    <div class="dlg-btns"><button class="dlg-b" data-r="n">닫기</button>
+      <button class="dlg-b p" data-r="y">저장</button></div>
+  </div>`;
+  let heavy=heavy0;
+  const paint=()=>{
+    document.getElementById('cHeavyNo').style.cssText+=';background:'+(!heavy?'var(--acc-bg)':'var(--raise)')+';color:'+(!heavy?'var(--acc)':'var(--muted)')+';border-color:'+(!heavy?'var(--acc)':'transparent');
+    document.getElementById('cHeavyYes').style.cssText+=';background:'+(heavy?'var(--acc-bg)':'var(--raise)')+';color:'+(heavy?'var(--acc)':'var(--muted)')+';border-color:'+(heavy?'var(--acc)':'transparent');
+    const w=parseFloat(ov.querySelector('#cW').value);
+    const r=document.getElementById('cResult');
+    if(!w){ r.innerHTML=''; return; }
+    const m=calcMacros(w,heavy);
+    r.innerHTML=`<div class="calc-card" style="margin-bottom:0">
+      <div class="calc-top"><span class="t">${w}kg × ${m.mult}${m.floored?' → 1,300 하한선 적용':''}</span></div>
+      <div class="calc-kcal">${m.kcal.toLocaleString()}<small>kcal</small></div>
+      <div class="calc-grid">
+        <div><b>${m.protein}g</b><span>단백질</span></div>
+        <div><b>${m.fat}g</b><span>지방</span></div>
+        <div><b>${m.carbs}g</b><span>탄수</span></div>
+        <div><b>${m.fiber}g</b><span>식이섬유</span></div>
+      </div></div>`;
+  };
+  ov.addEventListener('click',e=>{
+    if(e.target.id==='cHeavyNo'){ heavy=false; paint(); return; }
+    if(e.target.id==='cHeavyYes'){ heavy=true; paint(); return; }
+    const r=e.target.dataset&&e.target.dataset.r;
+    if(r==='y'){
+      const w=parseFloat(ov.querySelector('#cW').value);
+      if(!w){ toast('체중을 입력하세요'); return; }
+      prof.macroTarget=calcMacros(w,heavy);
+      jSet(K_PROF,prof); ov.remove(); toast('목표 저장됨'); renderMacroCard(); ghAutoBackupSoon();
+    } else if(r==='n'||e.target===ov) ov.remove();
+  });
+  ov.querySelector('#cW').addEventListener('input',paint);
+  document.body.appendChild(ov);
+  paint();
+}
+
 /* ================= 설정 ================= */
 document.getElementById('setBtn').onclick=()=>{
   const ov=document.createElement('div'); ov.className='ov';
@@ -978,6 +1092,7 @@ document.getElementById('setBtn').onclick=()=>{
     <div class="dlg-btns"><button class="dlg-b" data-r="n">닫기</button>
       <button class="dlg-b p" data-r="y">저장</button></div>
     <button class="dlg-b" id="expBtn" style="width:100%;margin-top:8px">데이터 백업 내려받기</button>
+    <button class="dlg-b" id="calcBtn2" style="width:100%;margin-top:8px">🔢 칼로리 계산기</button>
     <div style="height:1px;background:var(--border);margin:16px 0"></div>
     <div class="dlg-t" style="font-size:13.5px;margin-bottom:8px">☁️ 깃허브 자동 백업</div>
     <div id="ghStatus" style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-bottom:10px"></div>
@@ -991,6 +1106,7 @@ document.getElementById('setBtn').onclick=()=>{
   ov.querySelector('#ghCfgBtn').onclick=()=>ghConfigSheet();
   ov.querySelector('#ghPullBtn').onclick=()=>ghPull(true);
   ov.querySelector('#ghBackupBtn').onclick=()=>ghBackup(true);
+  ov.querySelector('#calcBtn2').onclick=()=>{ ov.remove(); calcSheet(); };
   ov.addEventListener('click',e=>{
     if(e.target.id==='expBtn'){
       const blob=new Blob([JSON.stringify({prof,log,tasks,meals},null,2)],{type:'application/json'});
@@ -1019,6 +1135,7 @@ document.querySelectorAll('nav.bottom button').forEach(t=>t.onclick=()=>{
 function onDataChanged(){
   renderHead();
   renderDayEditor(document.getElementById('todayEditor'), TODAY);
+  renderMacroCard();
   renderLevel();
   renderMealAll();
   if(document.getElementById('p-records').classList.contains('on')) renderRecords();
