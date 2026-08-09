@@ -88,6 +88,13 @@
   .calc-grid div{background:rgba(255,255,255,.08); border-radius:11px; padding:8px 4px; text-align:center;}
   .calc-grid b{display:block; font-family:var(--mono); font-size:14px; font-weight:800;}
   .calc-grid span{display:block; font-size:10px; color:rgba(255,255,255,.55); margin-top:2px; font-weight:600;}
+  .intake{margin-top:13px; padding-top:12px; border-top:1px solid rgba(255,255,255,.12);}
+  .intake-bar{height:6px; border-radius:4px; background:rgba(255,255,255,.14); overflow:hidden;}
+  .intake-fill{height:100%; background:#30D158; border-radius:4px; transition:width .4s ease;}
+  .intake-tx{font-size:11.5px; color:rgba(255,255,255,.6); margin-top:8px; line-height:1.6;}
+  .intake-tx b{color:#fff; font-family:var(--mono);}
+  .intake-tx span{display:block; color:#30D158; font-weight:700; margin-top:2px;}
+  .intake-tx span.over{color:#FF9F0A;}
   .calc-empty{display:flex; align-items:center; gap:12px; background:var(--surface);
     border:.5px solid var(--border); border-radius:16px; padding:14px; margin-bottom:10px;
     box-shadow:0 1px 3px rgba(0,0,0,.04);}
@@ -134,6 +141,58 @@
   .chk-txt{flex:1; min-width:0; font-size:14.5px; line-height:1.5; word-break:keep-all;}
   .chk-row.done .chk-txt{color:var(--dim); text-decoration:line-through;}
   .chk-del{flex:none; color:var(--dim); font-size:15px; padding:0 3px;}
+  .chk-edit{flex:none; color:var(--dim); font-size:14px; padding:0 3px;}
+  .chk-input{flex:1; min-width:0; background:var(--surface); border:1.5px solid var(--blue);
+    border-radius:9px; padding:9px 11px; color:var(--text); font-size:14.5px; outline:none;}
+  .chk-ok{flex:none; font-size:12px; font-weight:700; color:#fff; background:var(--acc);
+    padding:8px 12px; border-radius:9px;}
+  .chk-cancel{flex:none; font-size:12px; font-weight:600; color:var(--muted); padding:8px 6px;}
+
+  /* 식단 영양 칩 */
+  .nut-row{display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:5px;}
+  .nut-kcal{font-family:var(--mono); font-size:13.5px; font-weight:800; color:var(--text);}
+  .nut-chip{font-size:10px; font-weight:700; padding:2px 7px; border-radius:8px;
+    background:var(--blue-bg); color:var(--blue);}
+
+  /* 하루 영양 요약 */
+  .sum-card{background:var(--surface); border:.5px solid var(--border); border-radius:16px;
+    padding:14px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .sum-head{display:flex; align-items:baseline; gap:8px; margin-bottom:12px;}
+  .sum-day{font-size:14px; font-weight:800;}
+  .sum-meta{margin-left:auto; font-size:11px; color:var(--dim); font-weight:600;}
+  .sum-fast{font-size:10px; font-weight:800; padding:2px 8px; border-radius:9px;
+    background:var(--blue-bg); color:var(--blue);}
+  .sum-row{display:flex; align-items:center; gap:9px; padding:9px 0; border-top:.5px solid var(--border);}
+  .sum-row:first-of-type{border-top:none;}
+  .sum-name{flex:none; width:52px; font-size:12.5px; font-weight:700; color:var(--muted);}
+  .sum-val{flex:none; font-family:var(--mono); font-size:13px; font-weight:700; width:88px;}
+  .sum-val em{font-style:normal; color:var(--dim); font-weight:600;}
+  .sum-track{flex:1; height:6px; border-radius:4px; background:var(--raise); overflow:hidden; min-width:24px;}
+  .sum-fill{height:100%; border-radius:4px;}
+  .sum-tag{flex:none; font-size:11px; font-weight:800; width:76px; text-align:right;}
+  .t-good{color:var(--acc);} .t-warn{color:var(--amber);} .t-bad{color:var(--red);} .t-mut{color:var(--dim);}
+  .f-good{background:var(--acc);} .f-warn{background:var(--amber);} .f-bad{background:var(--red);}
+  .sum-none{font-size:12px; color:var(--dim); line-height:1.6; padding:4px 2px;}
+
+  /* 동기부여 보드 */
+  .mv-add{display:flex; gap:7px; margin-bottom:12px;}
+  .mv-add button{flex:1; padding:11px 2px; border-radius:12px; font-size:12.5px; font-weight:700;
+    background:var(--raise); border:1.5px dashed var(--border); color:var(--muted);}
+  .mv-card{background:var(--surface); border:.5px solid var(--border); border-radius:16px;
+    overflow:hidden; margin-bottom:11px; box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .mv-img{width:100%; display:block; background:var(--raise);}
+  .mv-body{padding:12px 13px 13px;}
+  .mv-note{width:100%; background:none; border:none; color:var(--text); font-size:14px;
+    line-height:1.6; outline:none; resize:none; padding:0; font-family:inherit;}
+  .mv-note::placeholder{color:var(--dim);}
+  .mv-link{display:flex; align-items:center; gap:8px; margin-top:9px; padding:10px 12px;
+    background:var(--blue-bg); border-radius:11px; color:var(--blue);
+    font-size:12.5px; font-weight:700; text-decoration:none; word-break:break-all;}
+  .mv-foot{display:flex; align-items:center; gap:8px; margin-top:10px;}
+  .mv-date{flex:1; font-family:var(--mono); font-size:10.5px; color:var(--dim); font-weight:600;}
+  .mv-btn{font-size:11.5px; font-weight:700; color:var(--muted); background:var(--raise);
+    padding:6px 11px; border-radius:20px;}
+  .mv-btn.del{color:var(--red);}
   .add-row{display:flex; gap:7px; margin-top:11px;}
   .add-row input{flex:1; min-width:0; background:var(--raise); border:1.5px solid transparent;
     border-radius:11px; padding:11px; color:var(--text); font-size:14px; outline:none;}
@@ -155,7 +214,11 @@
   .m-top{display:flex; align-items:center; gap:7px; margin-bottom:5px;}
   .m-pill{font-size:10.5px; font-weight:800; padding:2.5px 8px; border-radius:10px;
     background:var(--acc-bg); color:var(--acc);}
-  .m-del{margin-left:auto; color:var(--dim); font-size:14px;}
+  .m-pill.fast{background:var(--blue-bg); color:var(--blue);}
+  .m-ai{margin-left:auto; background:var(--blue-bg); color:var(--blue); font-size:11.5px;
+    font-weight:700; padding:4px 9px; border-radius:20px;}
+  .m-ai:disabled{opacity:.55;}
+  .m-del{color:var(--dim); font-size:14px;}
   .m-memo{flex:1; width:100%; background:none; border:none; color:var(--text);
     font-size:13.5px; line-height:1.55; outline:none; resize:none; padding:0;}
   .m-memo::placeholder{color:var(--dim);}
@@ -277,8 +340,8 @@
   nav.bottom .inner{display:flex; width:100%; max-width:520px;}
   nav.bottom button{flex:1; padding:9px 0 calc(8px + env(safe-area-inset-bottom,0px));
     display:flex; flex-direction:column; align-items:center; gap:3px;
-    font-size:10.5px; font-weight:600; color:var(--dim);}
-  nav.bottom button .ic{font-size:19px; opacity:.55;}
+    font-size:10px; font-weight:600; color:var(--dim); white-space:nowrap;}
+  nav.bottom button .ic{font-size:18px; opacity:.55;}
   nav.bottom button.sel{color:var(--acc);}
   nav.bottom button.sel .ic{opacity:1;}
 </style>
@@ -350,6 +413,14 @@
     <div class="sec-t">전체 식단 기록</div>
     <div id="mealAll"></div>
   </div>
+  <div class="page" id="p-motiv">
+    <div class="mv-add">
+      <button id="mvPhoto">📷 자극 사진</button>
+      <button id="mvNote">📝 메모</button>
+      <button id="mvLink">🔗 링크</button>
+    </div>
+    <div id="mvList"></div>
+  </div>
 </main>
 
 <nav class="bottom">
@@ -358,6 +429,7 @@
     <button data-p="level"><span class="ic">🪜</span>레벨</button>
     <button data-p="records"><span class="ic">🗓️</span>기록</button>
     <button data-p="meal"><span class="ic">🍽️</span>식단</button>
+    <button data-p="motiv"><span class="ic">🔥</span>동기부여</button>
   </div>
 </nav>
 
@@ -481,7 +553,19 @@ function compress(file,maxW,q){
 let pendingAdd=null; // {d, slot}
 document.getElementById('photoIn').addEventListener('change', async e=>{
   const f=e.target.files&&e.target.files[0]; e.target.value='';
-  if(!f||!pendingAdd) return;
+  if(!f) return;
+  if(pendingMotivPhoto){
+    pendingMotivPhoto=false;
+    try{
+      const data=await compress(f,1100,.82);
+      const key='v'+Date.now().toString(36);
+      await phPut({key,data}); phCache[key]=data;
+      mvAdd({id:key, d:TODAY, key, note:'', url:''});
+      toast('사진 추가됨');
+    }catch(err){ toast('사진 저장 실패'); }
+    return;
+  }
+  if(!pendingAdd) return;
   const {d,slot}=pendingAdd; pendingAdd=null;
   try{
     const data=await compress(f,900,.8);
@@ -547,7 +631,7 @@ function renderMonthly(){
 /* ================= 하루 기록 편집기 (오늘 탭 + 기록 시트 공용) ================= */
 const CK='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>';
 const EX=[['헬스','🏋️'],['수영','🏊'],['인클라인','🚶']];
-const SLOTS=['아침','점심','저녁','간식'];
+const SLOTS=['공복','아침','점심','저녁','간식'];
 
 function renderDayEditor(container, dateKey){
   container.innerHTML='';
@@ -615,11 +699,28 @@ function renderDayEditor(container, dateKey){
   tasks.forEach(t=>{
     const done=!!d.chk[t.id];
     const row=document.createElement('div'); row.className='chk-row'+(done?' done':'');
-    row.innerHTML=`<div class="box">${CK}</div><div class="chk-txt">${esc(t.text)}</div><button class="chk-del">✕</button>`;
+    row.innerHTML=`<div class="box">${CK}</div><div class="chk-txt">${esc(t.text)}</div>
+      <button class="chk-edit">✎</button><button class="chk-del">✕</button>`;
     const toggle=()=>{ if(done) delete d.chk[t.id]; else d.chk[t.id]=true;
       saveLog(); onDataChanged(); renderDayEditor(container,dateKey); };
     row.querySelector('.chk-txt').onclick=toggle;
     row.querySelector('.box').onclick=toggle;
+    row.querySelector('.chk-edit').onclick=()=>{
+      const cur=t.text;
+      row.innerHTML=`<input class="chk-input" type="text" value="${esc(cur)}">
+        <button class="chk-ok">저장</button><button class="chk-cancel">취소</button>`;
+      const ipt=row.querySelector('.chk-input');
+      ipt.focus(); ipt.setSelectionRange(cur.length,cur.length);
+      const commit=()=>{
+        const v=ipt.value.trim();
+        if(!v){ toast('내용을 입력하세요'); ipt.focus(); return; }
+        t.text=v; jSet(K_TASK,tasks); toast('수정됨');
+        onDataChanged(); renderDayEditor(container,dateKey);
+      };
+      row.querySelector('.chk-ok').onclick=commit;
+      row.querySelector('.chk-cancel').onclick=()=>renderDayEditor(container,dateKey);
+      ipt.addEventListener('keydown',e=>{ if(e.key==='Enter') commit(); });
+    };
     row.querySelector('.chk-del').onclick=()=>ask(`"${esc(t.text)}"\n항목을 삭제할까요? (모든 날짜에서 사라집니다)`,()=>{
       tasks=tasks.filter(x=>x.id!==t.id); jSet(K_TASK,tasks); toast('삭제됨');
       onDataChanged(); renderDayEditor(container,dateKey);
@@ -668,10 +769,22 @@ function renderDayEditor(container, dateKey){
 
 function buildMealCard(m, onChange){
   const card=document.createElement('div'); card.className='m-card';
+  const n=m.nut;
+  const fasting = m.slot==='공복';
   card.innerHTML=`
     <div class="m-thumb"><img src="${phCache[m.key]||m.url||''}" loading="lazy"></div>
     <div class="m-body">
-      <div class="m-top"><span class="m-pill">${m.slot}</span><button class="m-del">🗑</button></div>
+      <div class="m-top"><span class="m-pill${fasting?' fast':''}">${m.slot}</span>
+        ${fasting?'':'<button class="m-ai">📋 붙여넣기</button>'}<button class="m-del">🗑</button></div>
+      ${fasting?`<div class="nut-row"><span class="nut-kcal">0 kcal</span>
+        <span class="nut-chip">합산 제외</span></div>`
+      :(n?`<div class="nut-row">
+        <span class="nut-kcal">${n.kcal?n.kcal.toLocaleString()+' kcal':'—'}</span>
+        ${n.protein!=null?`<span class="nut-chip">단 ${n.protein}g</span>`:''}
+        ${n.fat!=null?`<span class="nut-chip">지 ${n.fat}g</span>`:''}
+        ${n.carbs!=null?`<span class="nut-chip">탄 ${n.carbs}g</span>`:''}
+        ${n.fiber!=null?`<span class="nut-chip">섬 ${n.fiber}g</span>`:''}
+      </div>`:'')}
       <textarea class="m-memo" rows="2" placeholder="한 줄 메모">${esc(m.memo)}</textarea>
     </div>`;
   card.querySelector('img').onclick=()=>{
@@ -683,6 +796,8 @@ function buildMealCard(m, onChange){
   card.querySelector('.m-memo').addEventListener('input',e=>{
     m.memo=e.target.value; clearTimeout(t); t=setTimeout(()=>{jSet(K_MEAL,meals); ghAutoBackupSoon();},350);
   });
+  const aiBtn=card.querySelector('.m-ai');
+  if(aiBtn) aiBtn.onclick=()=>pasteSheet(m,onChange);
   card.querySelector('.m-del').onclick=()=>ask('이 기록을 삭제할까요?',async()=>{
     meals=meals.filter(x=>x.id!==m.id); jSet(K_MEAL,meals);
     try{await phDel(m.key);}catch(e){} delete phCache[m.key];
@@ -690,6 +805,64 @@ function buildMealCard(m, onChange){
     toast('삭제됨'); onDataChanged(); onChange();
   });
   return card;
+}
+
+/* 채팅에서 받은 분석 결과를 붙여넣으면 숫자만 뽑아서 정리 */
+function parseNutrition(text){
+  const num=(re)=>{ const mm=text.match(re); return mm? Math.round(parseFloat(mm[1])) : null; };
+  const kcal    = num(/([\d,]+(?:\.\d+)?)\s*(?:kcal|칼로리|킬로칼로리)/i);
+  const protein = num(/단백질[^\d]{0,6}([\d.]+)/);
+  const fat     = num(/지방[^\d]{0,6}([\d.]+)/);
+  const carbs   = num(/(?:탄수화물|탄수)[^\d]{0,6}([\d.]+)/);
+  const fiber   = num(/(?:식이섬유|섬유질)[^\d]{0,6}([\d.]+)/);
+  let food=null;
+  const fm=text.match(/^\s*(?:음식\s*[:：]\s*)?([^\n·,(]{1,20}?)\s*(?:·|,|\(|\n|약|\d)/);
+  if(fm) food=fm[1].trim().replace(/[\s\-–—:：]+$/,'');
+  if(kcal==null && protein==null && fat==null && carbs==null && fiber==null) return null;
+  return {food:food||null, kcal, protein, fat, carbs, fiber};
+}
+function pasteSheet(m,onChange){
+  const ov=document.createElement('div'); ov.className='ov';
+  ov.innerHTML=`<div class="dlg">
+    <div class="dlg-t">분석 결과 붙여넣기</div>
+    <div style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-bottom:11px">
+      사진을 채팅창에 올리고 받은 분석 내용을 그대로 여기 붙여넣으면,
+      칼로리·단백질·지방·탄수만 뽑아서 정리해 줍니다.</div>
+    <textarea id="pTxt" rows="5" placeholder="예) 김치찌개 · 약 450kcal, 단백질 28g, 지방 18g, 탄수화물 40g"
+      style="width:100%;padding:12px;border-radius:11px;border:1.5px solid transparent;background:var(--raise);color:var(--text);font-size:14px;line-height:1.6;outline:none;resize:vertical;font-family:inherit">${esc(m.rawPaste||'')}</textarea>
+    <div id="pPrev" style="margin-top:11px"></div>
+    <div class="dlg-btns"><button class="dlg-b" data-r="n">취소</button>
+      <button class="dlg-b p" data-r="y">정리해서 저장</button></div>
+  </div>`;
+  const ta=ov.querySelector('#pTxt');
+  const prev=ov.querySelector('#pPrev');
+  const paint=()=>{
+    const n=parseNutrition(ta.value);
+    prev.innerHTML = n
+      ? `<div class="calc-card" style="margin-bottom:0;padding:13px">
+          <div class="calc-top"><span class="t">${esc(n.food||'인식된 값')}</span></div>
+          <div class="calc-kcal" style="font-size:24px;margin:2px 0 10px">${n.kcal?n.kcal.toLocaleString():'—'}<small>kcal</small></div>
+          <div class="calc-grid" style="grid-template-columns:repeat(3,1fr)">
+            <div><b>${n.protein??'—'}g</b><span>단백질</span></div>
+            <div><b>${n.fat??'—'}g</b><span>지방</span></div>
+            <div><b>${n.carbs??'—'}g</b><span>탄수</span></div>
+          </div></div>`
+      : `<div style="font-size:11.5px;color:var(--dim);padding:2px">숫자를 찾지 못했습니다. kcal·단백질·지방·탄수가 들어간 문장을 붙여넣어 보세요.</div>`;
+  };
+  ta.addEventListener('input',paint);
+  ov.addEventListener('click',e=>{
+    const r=e.target.dataset&&e.target.dataset.r;
+    if(r==='y'){
+      const n=parseNutrition(ta.value);
+      if(!n){ toast('인식할 숫자가 없습니다'); return; }
+      m.nut=n; m.rawPaste=ta.value.trim();
+      if(!m.memo && n.food) m.memo=n.food;
+      jSet(K_MEAL,meals); ov.remove(); toast('정리 완료');
+      ghAutoBackupSoon(); onDataChanged(); onChange();
+    } else if(r==='n'||e.target===ov) ov.remove();
+  });
+  document.body.appendChild(ov);
+  paint();
 }
 
 /* ================= 레벨 ================= */
@@ -855,21 +1028,160 @@ function openDaySheet(dateKey){
 }
 
 /* ================= 전체 식단 탭 ================= */
+/* ================= 동기부여 보드 ================= */
+let motiv = jGet('wl-motiv', []);   // [{id,d,key?,note,url}]
+let pendingMotivPhoto=false;
+
+function mvAdd(entry){
+  motiv.unshift(entry); jSet('wl-motiv',motiv); renderMotiv(); ghAutoBackupSoon();
+}
+document.getElementById('mvPhoto').onclick=()=>{
+  pendingMotivPhoto=true; pendingAdd=null; document.getElementById('photoIn').click();
+};
+document.getElementById('mvNote').onclick=()=>{
+  mvAdd({id:'v'+Date.now().toString(36), d:TODAY, note:'', url:''}); toast('메모 추가됨');
+};
+document.getElementById('mvLink').onclick=()=>mvLinkSheet(null);
+
+function mvLinkSheet(item){
+  const ov=document.createElement('div'); ov.className='ov';
+  ov.innerHTML=`<div class="dlg">
+    <div class="dlg-t">${item?'링크 수정':'링크 추가'}</div>
+    <input id="mvU" type="url" inputmode="url" placeholder="https://..." value="${esc(item&&item.url||'')}"
+      style="width:100%;padding:12px;border-radius:11px;border:1.5px solid transparent;background:var(--raise);color:var(--text);font-size:14px;margin-bottom:8px">
+    <input id="mvN" type="text" placeholder="설명 (선택)" value="${esc(item&&item.note||'')}"
+      style="width:100%;padding:12px;border-radius:11px;border:1.5px solid transparent;background:var(--raise);color:var(--text);font-size:14px">
+    <div class="dlg-btns"><button class="dlg-b" data-r="n">취소</button>
+      <button class="dlg-b p" data-r="y">저장</button></div>
+  </div>`;
+  ov.addEventListener('click',e=>{
+    const r=e.target.dataset&&e.target.dataset.r;
+    if(r==='y'){
+      let u=ov.querySelector('#mvU').value.trim();
+      const nt=ov.querySelector('#mvN').value.trim();
+      if(!u){ toast('링크를 입력하세요'); return; }
+      if(!/^https?:\/\//i.test(u)) u='https://'+u;
+      if(item){ item.url=u; item.note=nt; jSet('wl-motiv',motiv); renderMotiv(); ghAutoBackupSoon(); toast('수정됨'); }
+      else { mvAdd({id:'v'+Date.now().toString(36), d:TODAY, note:nt, url:u}); toast('링크 추가됨'); }
+      ov.remove();
+    } else if(r==='n'||e.target===ov) ov.remove();
+  });
+  document.body.appendChild(ov);
+}
+
+function renderMotiv(){
+  const list=document.getElementById('mvList');
+  list.innerHTML='';
+  if(!motiv.length){
+    list.innerHTML='<div class="empty">아직 비어 있습니다.<br>자극되는 사진, 다짐 한 줄, 참고 영상 링크를<br>여기에 모아두세요.</div>';
+    return;
+  }
+  motiv.forEach(v=>{
+    const card=document.createElement('div'); card.className='mv-card';
+    const img=(v.key&&(phCache[v.key]||v.url2))? `<img class="mv-img" src="${phCache[v.key]||v.url2}" loading="lazy">` : '';
+    const link=v.url? `<a class="mv-link" href="${esc(v.url)}" target="_blank" rel="noopener">🔗 ${esc(v.url)}</a>` : '';
+    card.innerHTML=`${img}
+      <div class="mv-body">
+        <textarea class="mv-note" rows="2" placeholder="여기에 메모를 적으세요">${esc(v.note||'')}</textarea>
+        ${link}
+        <div class="mv-foot">
+          <span class="mv-date">${shortD(v.d)}</span>
+          <button class="mv-btn edit">${v.url?'링크 수정':'링크 추가'}</button>
+          <button class="mv-btn del">삭제</button>
+        </div>
+      </div>`;
+    if(v.key){
+      const im=card.querySelector('.mv-img');
+      if(im) im.onclick=()=>{
+        const ov=document.createElement('div'); ov.className='lb';
+        ov.innerHTML=`<img src="${phCache[v.key]||v.url2||''}">`;
+        ov.onclick=()=>ov.remove(); document.body.appendChild(ov);
+      };
+    }
+    let t=null;
+    card.querySelector('.mv-note').addEventListener('input',e=>{
+      v.note=e.target.value; clearTimeout(t);
+      t=setTimeout(()=>{jSet('wl-motiv',motiv); ghAutoBackupSoon();},350);
+    });
+    card.querySelector('.edit').onclick=()=>mvLinkSheet(v);
+    card.querySelector('.del').onclick=()=>ask('이 항목을 삭제할까요?',async()=>{
+      motiv=motiv.filter(x=>x.id!==v.id); jSet('wl-motiv',motiv);
+      if(v.key){ try{await phDel(v.key);}catch(e){} delete phCache[v.key]; delete photoSynced[v.key]; saveSynced(); }
+      renderMotiv(); ghAutoBackupSoon(); toast('삭제됨');
+    });
+    list.appendChild(card);
+  });
+}
+
+/* 하루 영양 요약 카드.
+   단백질·지방·식이섬유는 초과해도 괜찮으니 초과=초록, 부족=주황.
+   탄수화물은 초과하면 안 되므로 초과=빨강, 여유 있으면 초록.
+   칼로리는 초과=주황. */
+function buildDaySummary(dateKey){
+  const mt=prof.macroTarget;
+  const wrap=document.createElement('div'); wrap.className='sum-card';
+  const it=dayIntake(dateKey);
+  const isToday=dateKey===TODAY;
+  const dt=parseD(dateKey);
+  const head=`<div class="sum-head">
+      <span class="sum-day">${isToday?'오늘':`${dt.getMonth()+1}월 ${dt.getDate()}일`}</span>
+      ${it.fasting?'<span class="sum-fast">공복</span>':''}
+      <span class="sum-meta">${it.n?`${it.n}끼 기록`:'기록 없음'}</span>
+    </div>`;
+  if(!mt){
+    wrap.innerHTML=head+`<div class="sum-none">⚙ 설정 → 칼로리 계산기로 목표를 먼저 정하면
+      여기에 부족·초과가 계산되어 표시됩니다.</div>`;
+    return wrap;
+  }
+  const rows=[
+    {name:'칼로리', got:it.kcal,    tgt:mt.kcal,    unit:'kcal', overBad:'warn'},
+    {name:'단백질', got:it.protein, tgt:mt.protein, unit:'g',    overBad:'good'},
+    {name:'지방',   got:it.fat,     tgt:mt.fat,     unit:'g',    overBad:'good'},
+    {name:'탄수',   got:it.carbs,   tgt:mt.carbs,   unit:'g',    overBad:'bad'},
+    {name:'식이섬유',got:it.fiber,  tgt:mt.fiber,   unit:'g',    overBad:'good'},
+  ];
+  wrap.innerHTML = head + rows.map(r=>{
+    const diff=r.got-r.tgt;
+    const pct=Math.min(100, r.tgt? Math.round(r.got/r.tgt*100):0);
+    let tag,tone,fill;
+    if(diff>0){
+      tag=`+${Math.abs(diff).toLocaleString()}${r.unit==='kcal'?'':'g'} 초과`;
+      tone = r.overBad==='good' ? 't-good' : (r.overBad==='bad' ? 't-bad' : 't-warn');
+      fill = r.overBad==='good' ? 'f-good' : (r.overBad==='bad' ? 'f-bad' : 'f-warn');
+    } else if(diff<0){
+      tag=`−${Math.abs(diff).toLocaleString()}${r.unit==='kcal'?'':'g'} 부족`;
+      tone = r.overBad==='bad' ? 't-good' : 't-warn';
+      fill = r.overBad==='bad' ? 'f-good' : 'f-warn';
+    } else {
+      tag='딱 맞음'; tone='t-good'; fill='f-good';
+    }
+    if(r.got===0){ tag=`−${r.tgt.toLocaleString()}${r.unit==='kcal'?'':'g'} 부족`; tone='t-mut'; fill='f-warn'; }
+    return `<div class="sum-row">
+      <span class="sum-name">${r.name}</span>
+      <span class="sum-val">${r.got.toLocaleString()}<em> / ${r.tgt.toLocaleString()}${r.unit==='kcal'?'':'g'}</em></span>
+      <span class="sum-track"><span class="sum-fill ${fill}" style="width:${pct}%"></span></span>
+      <span class="sum-tag ${tone}">${tag}</span>
+    </div>`;
+  }).join('');
+  return wrap;
+}
+
 function renderMealAll(){
   const list=document.getElementById('mealAll');
   list.innerHTML='';
+  // 오늘은 기록이 없어도 목표 대비 현황을 항상 보여준다
+  list.appendChild(buildDaySummary(TODAY));
   if(!meals.length){
-    list.innerHTML='<div class="empty">아직 기록이 없습니다.<br>오늘 탭이나 기록 탭에서 사진을 찍어 남겨보세요.</div>';
+    const e=document.createElement('div'); e.className='empty';
+    e.innerHTML='아직 기록이 없습니다.<br>오늘 탭이나 기록 탭에서 사진을 찍어 남겨보세요.';
+    list.appendChild(e);
     return;
   }
-  meals.forEach(m=>{
-    const wrap=document.createElement('div'); wrap.style.marginBottom='4px';
-    const dateLbl=document.createElement('div');
-    dateLbl.style.cssText='font-size:11px;font-weight:700;color:var(--dim);margin:0 2px 4px;font-family:var(--mono)';
-    dateLbl.textContent=shortD(m.d);
-    wrap.appendChild(dateLbl);
-    wrap.appendChild(buildMealCard(m, renderMealAll));
-    list.appendChild(wrap);
+  const byDay={};
+  meals.forEach(m=>{ (byDay[m.d]=byDay[m.d]||[]).push(m); });
+  Object.keys(byDay).sort().reverse().forEach(d=>{
+    if(d!==TODAY) list.appendChild(buildDaySummary(d));
+    byDay[d].forEach(m=>list.appendChild(buildMealCard(m, renderMealAll)));
   });
 }
 
@@ -928,22 +1240,25 @@ async function ghBackup(manual){
   if(ghBusy) return; ghBusy=true; ghStatusText('백업 중...');
   try{
     let up=0;
-    for(const m of meals){
+    const photoOwners=[...meals, ...motiv.filter(v=>v.key)];
+    for(const m of photoOwners){
       if(!photoSynced[m.key] && phCache[m.key]){
         const b64=(phCache[m.key].split(',')[1])||'';
         const res=await ghApi(`health/photos/${m.key}.jpg`,{method:'PUT',
           body:JSON.stringify({message:`health photo ${m.key}`, content:b64, branch:c.branch||'main'})});
         if(res.ok||res.status===422){
           photoSynced[m.key]=true;
-          m.url=`https://raw.githubusercontent.com/${c.owner}/${c.repo}/${c.branch||'main'}/health/photos/${m.key}.jpg`;
+          const raw=`https://raw.githubusercontent.com/${c.owner}/${c.repo}/${c.branch||'main'}/health/photos/${m.key}.jpg`;
+          if(m.slot!==undefined) m.url=raw; else m.url2=raw;
           up++;
         } else { throw new Error('사진 업로드 실패 '+res.status); }
       }
     }
-    if(up) jSet(K_MEAL,meals);
+    if(up){ jSet(K_MEAL,meals); jSet('wl-motiv',motiv); }
     saveSynced();
     const manifest={updated:new Date().toISOString(), prof, log, tasks,
-      meals:meals.map(m=>({id:m.id,d:m.d,slot:m.slot,memo:m.memo,key:m.key,url:m.url||null}))};
+      meals:meals.map(m=>({id:m.id,d:m.d,slot:m.slot,memo:m.memo,key:m.key,url:m.url||null,nut:m.nut||null,rawPaste:m.rawPaste||null})),
+      motiv:motiv.map(v=>({id:v.id,d:v.d,key:v.key||null,note:v.note||'',url:v.url||'',url2:v.url2||null}))};
     let sha=null;
     const g=await ghApi('health/data.json',{method:'GET'});
     if(g.ok) sha=(await g.json()).sha;
@@ -979,6 +1294,11 @@ async function ghPull(manual){
       if(!haveIds.has(m.id)){ meals.push(m); if(m.url) phCache[m.key]=phCache[m.key]||m.url; added++; }
     });
     jSet(K_MEAL,meals);
+    const haveMv=new Set(motiv.map(v=>v.id));
+    (man.motiv||[]).forEach(v=>{
+      if(!haveMv.has(v.id)){ motiv.push(v); if(v.url2&&v.key) phCache[v.key]=phCache[v.key]||v.url2; added++; }
+    });
+    jSet('wl-motiv',motiv);
     if(manual) toast(added? `⬇ ${added}개 불러옴` : '이미 최신 상태입니다');
     onDataChanged();
   }catch(err){ if(manual) toast('불러오기 실패 — 깃허브 설정 확인'); }
@@ -1000,6 +1320,19 @@ function calcMacros(weight, heavy){
   const fiber = Math.round(kcal/1000*14);
   return {weight, heavy, mult, kcal, protein, fat, carbs, fiber, floored};
 }
+/* 하루치 합산. 공복(0으로 잡는 슬롯)은 계산에서 제외 */
+function dayIntake(dateKey){
+  let kcal=0,protein=0,fat=0,carbs=0,fiber=0,n=0,fasting=false;
+  meals.forEach(m=>{
+    if(m.d!==dateKey) return;
+    if(m.slot==='공복'){ fasting=true; return; }
+    if(!m.nut) return;
+    kcal+=m.nut.kcal||0; protein+=m.nut.protein||0;
+    fat+=m.nut.fat||0; carbs+=m.nut.carbs||0; fiber+=m.nut.fiber||0; n++;
+  });
+  return {kcal,protein,fat,carbs,fiber,n,fasting};
+}
+function todayIntake(){ return dayIntake(TODAY); }
 function renderMacroCard(){
   const el=document.getElementById('macroCard');
   const mt=prof.macroTarget;
@@ -1008,6 +1341,9 @@ function renderMacroCard(){
       <span class="tx">체중·단백질·지방·탄수 목표를 계산해서 여기 띄워둘 수 있어요.</span>
       <button id="calcOpenBtn">계산하기</button></div>`;
   } else {
+    const it=todayIntake();
+    const pct=Math.min(100, Math.round(it.kcal/mt.kcal*100));
+    const left=mt.kcal-it.kcal;
     el.innerHTML=`<div class="calc-card">
       <div class="calc-top"><span class="t">오늘의 목표 · ${mt.weight}kg 기준${mt.floored?' · 하한선 적용':''}</span>
         <button class="calc-edit" id="calcOpenBtn">수정</button></div>
@@ -1018,6 +1354,12 @@ function renderMacroCard(){
         <div><b>${mt.carbs}g</b><span>탄수</span></div>
         <div><b>${mt.fiber}g</b><span>식이섬유</span></div>
       </div>
+      ${it.n?`<div class="intake">
+        <div class="intake-bar"><div class="intake-fill" style="width:${pct}%"></div></div>
+        <div class="intake-tx">오늘 먹은 것 <b>${it.kcal.toLocaleString()}kcal</b>
+          · 단 ${it.protein}g · 지 ${it.fat}g · 탄 ${it.carbs}g · 섬 ${it.fiber}g
+          <span class="${left<0?'over':''}">${left>=0?`남은 ${left.toLocaleString()}kcal`:`${Math.abs(left).toLocaleString()}kcal 초과`}${it.carbs>mt.carbs?` · 탄수 ${(it.carbs-mt.carbs).toLocaleString()}g 초과`:''}</span></div>
+      </div>`:''}
     </div>`;
   }
   document.getElementById('calcOpenBtn').onclick=calcSheet;
@@ -1138,6 +1480,7 @@ function onDataChanged(){
   renderMacroCard();
   renderLevel();
   renderMealAll();
+  renderMotiv();
   if(document.getElementById('p-records').classList.contains('on')) renderRecords();
   ghAutoBackupSoon();
 }
