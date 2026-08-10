@@ -210,7 +210,28 @@
     background:var(--raise); border:1.5px dashed var(--border); color:var(--muted);}
   .mv-card{background:var(--surface); border:.5px solid var(--border); border-radius:16px;
     overflow:hidden; margin-bottom:11px; box-shadow:0 1px 3px rgba(0,0,0,.04);}
-  .mv-img{width:100%; display:block; background:var(--raise);}
+  .mv-car{position:relative; overflow:hidden; background:#000;}
+  .mv-track{display:flex; transition:transform .28s cubic-bezier(.22,.61,.36,1);}
+  .mv-cell{flex:0 0 100%; width:100%; display:flex; align-items:center; justify-content:center;
+    background:#000; max-height:62vh;}
+  .mv-cell img, .mv-cell video{width:100%; max-height:62vh; object-fit:contain; display:block;}
+  .mv-dots{position:absolute; left:0; right:0; bottom:9px; display:flex; justify-content:center;
+    gap:5px; pointer-events:none;}
+  .mv-dots i{width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.45);
+    transition:.18s;}
+  .mv-dots i.on{background:#fff; transform:scale(1.25);}
+  .mv-count{position:absolute; top:9px; right:10px; font-size:10.5px; font-weight:700;
+    color:#fff; background:rgba(0,0,0,.5); padding:3px 9px; border-radius:20px;
+    pointer-events:none; font-family:var(--mono);}
+  .mv-nav{position:absolute; top:50%; transform:translateY(-50%); width:34px; height:52px;
+    background:rgba(0,0,0,.34); color:#fff; font-size:24px; line-height:1;
+    display:flex; align-items:center; justify-content:center;}
+  .mv-nav.l{left:0; border-radius:0 10px 10px 0;}
+  .mv-nav.r{right:0; border-radius:10px 0 0 10px;}
+  .lb-stage{max-width:100%; max-height:100%; display:flex; align-items:center; justify-content:center;}
+  .lb-stage img, .lb-stage video{max-width:100vw; max-height:88vh; object-fit:contain;}
+  .lb-count{position:absolute; top:calc(14px + env(safe-area-inset-top,0px)); left:0; right:0;
+    text-align:center; color:#fff; font-size:12px; font-weight:700; font-family:var(--mono);}
   .mv-body{padding:12px 13px 13px;}
   .mv-note{width:100%; background:none; border:none; color:var(--text); font-size:14px;
     line-height:1.6; outline:none; resize:none; padding:0; font-family:inherit;
@@ -457,7 +478,7 @@
   </div>
   <div class="page" id="p-motiv">
     <div class="mv-add">
-      <button id="mvPhoto">📷 자극 사진</button>
+      <button id="mvPhoto">📷 사진·영상</button>
       <button id="mvNote">📝 메모</button>
       <button id="mvLink">🔗 링크</button>
     </div>
@@ -476,6 +497,7 @@
 </nav>
 
 <input type="file" id="photoIn" accept="image/*" style="display:none">
+<input type="file" id="mvIn" accept="image/*,video/*" multiple style="display:none">
 <div id="sheetRoot"></div>
 <div class="toast" id="toast"></div>
 
@@ -693,6 +715,23 @@ async function phAll(){const d=await db(); return new Promise((res,rej)=>{
   c.onsuccess=e=>{const cu=e.target.result; if(cu){out[cu.value.key]=cu.value.data; cu.continue();} else res(out);};
   c.onerror=()=>rej(c.error);});}
 let phCache={};
+/* 동영상은 Blob으로 보관한다(base64로 들고 있으면 메모리가 터진다).
+   화면에 붙일 때만 objectURL을 만들어 캐시한다. */
+const blobURLs={};
+function mediaURL(key, remote){
+  const v=phCache[key];
+  if(v instanceof Blob){
+    if(!blobURLs[key]) blobURLs[key]=URL.createObjectURL(v);
+    return blobURLs[key];
+  }
+  return v || remote || '';
+}
+/* 옛 형식(사진 1장 = v.key)을 media 배열로 통일 */
+function mvMedia(v){
+  if(Array.isArray(v.media)) return v.media;
+  if(v.key) return [{key:v.key, type:'image', remote:v.url2||null}];
+  return [];
+}
 function compress(file,maxW,q){
   return new Promise((res,rej)=>{
     const rd=new FileReader();
@@ -714,17 +753,6 @@ let pendingAdd=null; // {d, slot}
 document.getElementById('photoIn').addEventListener('change', async e=>{
   const f=e.target.files&&e.target.files[0]; e.target.value='';
   if(!f) return;
-  if(pendingMotivPhoto){
-    pendingMotivPhoto=false;
-    try{
-      const data=await compress(f,1100,.82);
-      const key='v'+Date.now().toString(36);
-      await phPut({key,data}); phCache[key]=data;
-      mvAdd({id:key, d:TODAY, key, note:'', url:''});
-      toast('사진 추가됨');
-    }catch(err){ toast('사진 저장 실패'); }
-    return;
-  }
   if(!pendingAdd) return;
   const {d,slot}=pendingAdd; pendingAdd=null;
   try{
@@ -991,7 +1019,7 @@ function slotChoice(dateKey, slot, onChange){
   </div>`;
   ov.querySelector('#cPhoto').onclick=()=>{
     ov.remove();
-    pendingAdd={d:dateKey, slot}; pendingMotivPhoto=false;
+    pendingAdd={d:dateKey, slot};
     document.getElementById('photoIn').click();
   };
   ov.querySelector('#cFast').onclick=()=>{
@@ -1305,14 +1333,47 @@ function openDaySheet(dateKey){
 /* ================= 전체 식단 탭 ================= */
 /* ================= 동기부여 보드 ================= */
 let motiv = jGet('wl-motiv', []);   // [{id,d,key?,note,url}]
-let pendingMotivPhoto=false;
 
 function mvAdd(entry){
   motiv.unshift(entry); jSet('wl-motiv',motiv); renderMotiv(); ghAutoBackupSoon();
 }
+let mvTarget=null;  // 기존 카드에 추가할 때 그 카드
+const VID_MAX=60*1024*1024;
 document.getElementById('mvPhoto').onclick=()=>{
-  pendingMotivPhoto=true; pendingAdd=null; document.getElementById('photoIn').click();
+  mvTarget=null; document.getElementById('mvIn').click();
 };
+document.getElementById('mvIn').addEventListener('change', async e=>{
+  const files=[...(e.target.files||[])]; e.target.value='';
+  if(!files.length) return;
+  const target=mvTarget; mvTarget=null;
+  const added=[];
+  for(const f of files){
+    try{
+      const isVid=/^video\//.test(f.type);
+      const key=(isVid?'vv':'vp')+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      if(isVid){
+        if(f.size>VID_MAX){ toast('너무 큰 영상은 건너뜀'); continue; }
+        await phPut({key, data:f});           // 영상은 Blob 그대로
+        phCache[key]=f;
+        added.push({key, type:'video', size:f.size});
+      } else {
+        const data=await compress(f,1400,.82); // 사진은 압축해서 dataURL
+        await phPut({key, data});
+        phCache[key]=data;
+        added.push({key, type:'image'});
+      }
+    }catch(err){ /* 개별 파일 실패는 건너뛴다 */ }
+  }
+  if(!added.length){ toast('추가 실패'); return; }
+  if(target){
+    target.media=[...mvMedia(target), ...added];
+    delete target.key; delete target.url2;
+    jSet('wl-motiv',motiv); renderMotiv(); ghAutoBackupSoon();
+  } else {
+    mvAdd({id:'v'+Date.now().toString(36), d:TODAY, media:added, note:'', url:''});
+  }
+  toast(`${added.length}개 추가됨`);
+});
 document.getElementById('mvNote').onclick=()=>{
   mvAdd({id:'v'+Date.now().toString(36), d:TODAY, note:'', url:''}); toast('메모 추가됨');
 };
@@ -1344,113 +1405,142 @@ function mvLinkSheet(item){
   showOverlay(ov);
 }
 
+/* 여러 장을 좌우로 넘기는 캐러셀. 탭(좌/우 절반) + 스와이프 모두 지원 */
+function buildCarousel(mediaList, onOpen){
+  const wrap=document.createElement('div'); wrap.className='mv-car';
+  let i=0;
+  const track=document.createElement('div'); track.className='mv-track';
+  mediaList.forEach(md=>{
+    const cell=document.createElement('div'); cell.className='mv-cell';
+    if(md.type==='video'){
+      const v=document.createElement('video');
+      v.src=mediaURL(md.key, md.remote); v.controls=true; v.playsInline=true; v.preload='metadata';
+      cell.appendChild(v);
+    } else {
+      const im=document.createElement('img');
+      im.src=mediaURL(md.key, md.remote); im.loading='lazy';
+      im.onclick=()=>onOpen(i);
+      cell.appendChild(im);
+    }
+    track.appendChild(cell);
+  });
+  wrap.appendChild(track);
+
+  const multi=mediaList.length>1;
+  let dots=null;
+  if(multi){
+    dots=document.createElement('div'); dots.className='mv-dots';
+    mediaList.forEach(()=>dots.appendChild(document.createElement('i')));
+    wrap.appendChild(dots);
+    const cnt=document.createElement('div'); cnt.className='mv-count';
+    wrap.appendChild(cnt);
+    const prev=document.createElement('button'); prev.className='mv-nav l'; prev.textContent='‹';
+    const next=document.createElement('button'); next.className='mv-nav r'; next.textContent='›';
+    wrap.appendChild(prev); wrap.appendChild(next);
+    prev.onclick=e=>{e.stopPropagation(); go(i-1);};
+    next.onclick=e=>{e.stopPropagation(); go(i+1);};
+    const paint=()=>{
+      track.style.transform=`translateX(${-i*100}%)`;
+      [...dots.children].forEach((d,n)=>d.classList.toggle('on',n===i));
+      cnt.textContent=`${i+1} / ${mediaList.length}`;
+      prev.style.visibility=i===0?'hidden':'visible';
+      next.style.visibility=i===mediaList.length-1?'hidden':'visible';
+    };
+    var go=n=>{ i=Math.max(0,Math.min(mediaList.length-1,n)); paint(); };
+    // 스와이프
+    let x0=null,y0=null;
+    wrap.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY;},{passive:true});
+    wrap.addEventListener('touchend',e=>{
+      if(x0==null) return;
+      const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0;
+      if(Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy)) go(dx<0? i+1 : i-1);
+      x0=null;
+    },{passive:true});
+    paint();
+  }
+  return wrap;
+}
+
+/* 전체화면 보기 — 여기서도 좌우로 넘길 수 있다 */
+function openLightbox(mediaList, start){
+  let i=start||0;
+  const ov=document.createElement('div'); ov.className='lb';
+  const stage=document.createElement('div'); stage.className='lb-stage';
+  const cnt=document.createElement('div'); cnt.className='lb-count';
+  ov.appendChild(stage); ov.appendChild(cnt);
+  const paint=()=>{
+    const md=mediaList[i];
+    stage.innerHTML = md.type==='video'
+      ? `<video src="${mediaURL(md.key,md.remote)}" controls playsinline autoplay></video>`
+      : `<img src="${mediaURL(md.key,md.remote)}">`;
+    cnt.textContent = mediaList.length>1 ? `${i+1} / ${mediaList.length}` : '';
+  };
+  const go=n=>{ i=(n+mediaList.length)%mediaList.length; paint(); };
+  ov.onclick=e=>{
+    if(e.target.tagName==='VIDEO') return;
+    if(mediaList.length>1){
+      const r=ov.getBoundingClientRect();
+      const rel=(e.clientX-r.left)/r.width;
+      if(rel<0.3){ go(i-1); return; }
+      if(rel>0.7){ go(i+1); return; }
+    }
+    ov.remove();
+  };
+  let x0=null;
+  ov.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true});
+  ov.addEventListener('touchend',e=>{
+    if(x0==null) return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>40){ go(dx<0? i+1 : i-1); }
+    x0=null;
+  },{passive:true});
+  paint(); showOverlay(ov);
+}
+
 function renderMotiv(){
   const list=document.getElementById('mvList');
   list.innerHTML='';
   if(!motiv.length){
-    list.innerHTML='<div class="empty">아직 비어 있습니다.<br>자극되는 사진, 다짐 한 줄, 참고 영상 링크를<br>여기에 모아두세요.</div>';
+    list.innerHTML='<div class="empty">아직 비어 있습니다.<br>자극되는 사진·영상, 다짐 한 줄, 참고 링크를<br>여기에 모아두세요.</div>';
     return;
   }
   motiv.forEach(v=>{
     const card=document.createElement('div'); card.className='mv-card';
-    const img=(v.key&&(phCache[v.key]||v.url2))? `<img class="mv-img" src="${phCache[v.key]||v.url2}" loading="lazy">` : '';
-    const link=v.url? `<a class="mv-link" href="${esc(v.url)}" target="_blank" rel="noopener">🔗 ${esc(v.url)}</a>` : '';
-    card.innerHTML=`${img}
-      <div class="mv-body">
-        <textarea class="mv-note" rows="2" placeholder="여기에 메모를 적으세요">${esc(v.note||'')}</textarea>
-        ${link}
-        <div class="mv-foot">
-          <span class="mv-date">${shortD(v.d)}</span>
-          <button class="mv-btn edit">${v.url?'링크 수정':'링크 추가'}</button>
-          <button class="mv-btn del">삭제</button>
-        </div>
+    const media=mvMedia(v);
+    if(media.length) card.appendChild(buildCarousel(media, n=>openLightbox(media,n)));
+    const body=document.createElement('div'); body.className='mv-body';
+    body.innerHTML=`
+      <textarea class="mv-note" rows="2" placeholder="여기에 메모를 적으세요">${esc(v.note||'')}</textarea>
+      ${v.url? `<a class="mv-link" href="${esc(v.url)}" target="_blank" rel="noopener">🔗 ${esc(v.url)}</a>`:''}
+      <div class="mv-foot">
+        <span class="mv-date">${shortD(v.d)}${media.length>1?` · ${media.length}개`:''}</span>
+        <button class="mv-btn add">＋ 추가</button>
+        <button class="mv-btn edit">${v.url?'링크':'링크'}</button>
+        <button class="mv-btn del">삭제</button>
       </div>`;
-    if(v.key){
-      const im=card.querySelector('.mv-img');
-      if(im) im.onclick=()=>{
-        const ov=document.createElement('div'); ov.className='lb';
-        ov.innerHTML=`<img src="${phCache[v.key]||v.url2||''}">`;
-        ov.onclick=()=>ov.remove(); showOverlay(ov);
-      };
-    }
+    card.appendChild(body);
     let t=null;
-    const noteTa=card.querySelector('.mv-note');
+    const noteTa=body.querySelector('.mv-note');
     bindAutoGrow(noteTa);
     noteTa.addEventListener('input',e=>{
       v.note=e.target.value; clearTimeout(t);
       t=setTimeout(()=>{jSet('wl-motiv',motiv); ghAutoBackupSoon();},350);
     });
-    card.querySelector('.edit').onclick=()=>mvLinkSheet(v);
-    card.querySelector('.del').onclick=()=>ask('이 항목을 삭제할까요?',async()=>{
-      motiv=motiv.filter(x=>x.id!==v.id); jSet('wl-motiv',motiv);
-      if(v.key){ try{await phDel(v.key);}catch(e){} delete phCache[v.key]; delete photoSynced[v.key]; saveSynced(); }
-      renderMotiv(); ghAutoBackupSoon(); toast('삭제됨');
-    });
+    body.querySelector('.add').onclick=()=>{ mvTarget=v; document.getElementById('mvIn').click(); };
+    body.querySelector('.edit').onclick=()=>mvLinkSheet(v);
+    body.querySelector('.del').onclick=()=>ask(
+      media.length? `사진·영상 ${media.length}개가 함께 삭제됩니다.\n삭제할까요?` : '이 항목을 삭제할까요?',
+      async()=>{
+        motiv=motiv.filter(x=>x.id!==v.id); jSet('wl-motiv',motiv);
+        for(const md of media){
+          try{await phDel(md.key);}catch(e){}
+          delete phCache[md.key]; delete photoSynced[md.key];
+          if(blobURLs[md.key]){ URL.revokeObjectURL(blobURLs[md.key]); delete blobURLs[md.key]; }
+        }
+        saveSynced(); renderMotiv(); ghAutoBackupSoon(); toast('삭제됨');
+      });
     list.appendChild(card);
   });
-}
-
-/* 하루 영양 요약 카드.
-   단백질·지방·식이섬유는 초과해도 괜찮으니 초과=초록, 부족=주황.
-   탄수화물은 초과하면 안 되므로 초과=빨강, 여유 있으면 초록.
-   칼로리는 초과=주황. */
-function buildDaySummary(dateKey){
-  const mt=prof.macroTarget;
-  const wrap=document.createElement('div'); wrap.className='sum-card';
-  const it=dayIntake(dateKey);
-  const isToday=dateKey===TODAY;
-  const dt=parseD(dateKey);
-  const head=`<div class="sum-head">
-      <span class="sum-day">${isToday?'오늘':`${dt.getMonth()+1}월 ${dt.getDate()}일`}</span>
-      ${it.fasting?`<span class="sum-fast">공복 ${it.fastedSlots.join('·')}</span>`:''}
-      <span class="sum-meta">${it.n?`${it.n}끼 기록`:'기록 없음'}</span>
-    </div>`;
-  if(!mt){
-    wrap.innerHTML=head+`<div class="sum-none">⚙ 설정 → 칼로리 계산기로 목표를 먼저 정하면
-      여기에 부족·초과가 계산되어 표시됩니다.</div>`;
-    return wrap;
-  }
-  const bn=dayBurn(dateKey);
-  const net=it.kcal-bn.kcal;
-  const rows=[
-    {name:'칼로리', got:net,        tgt:mt.kcal,    unit:'kcal', overBad:'warn'},
-    {name:'단백질', got:it.protein, tgt:mt.protein, unit:'g',    overBad:'good'},
-    {name:'지방',   got:it.fat,     tgt:mt.fat,     unit:'g',    overBad:'good'},
-    {name:'탄수',   got:it.carbs,   tgt:mt.carbs,   unit:'g',    overBad:'bad'},
-    {name:'식이섬유',got:it.fiber,  tgt:mt.fiber,   unit:'g',    overBad:'good'},
-  ];
-  const eq=`<div class="sum-eq">
-      <span>섭취 <b>${it.kcal.toLocaleString()}</b></span>
-      <span class="op">−</span>
-      <span>운동 <b class="burn">${bn.kcal.toLocaleString()}</b></span>
-      <span class="op">=</span>
-      <span class="tot">${net.toLocaleString()}<em>kcal</em></span>
-    </div>`;
-  wrap.innerHTML = head + eq + rows.map(r=>{
-    const diff=r.got-r.tgt;
-    const pct=Math.max(0, Math.min(100, r.tgt? Math.round(r.got/r.tgt*100):0));
-    let tag,tone,fill;
-    if(diff>0){
-      tag=`+${Math.abs(diff).toLocaleString()}${r.unit==='kcal'?'':'g'} 초과`;
-      tone = r.overBad==='good' ? 't-good' : (r.overBad==='bad' ? 't-bad' : 't-warn');
-      fill = r.overBad==='good' ? 'f-good' : (r.overBad==='bad' ? 'f-bad' : 'f-warn');
-    } else if(diff<0){
-      tag=`−${Math.abs(diff).toLocaleString()}${r.unit==='kcal'?'':'g'} 부족`;
-      tone = r.overBad==='bad' ? 't-good' : 't-warn';
-      fill = r.overBad==='bad' ? 'f-good' : 'f-warn';
-    } else {
-      tag='딱 맞음'; tone='t-good'; fill='f-good';
-    }
-    if(r.got<=0 && it.n===0 && bn.kcal===0){ tag=`−${r.tgt.toLocaleString()}${r.unit==='kcal'?'':'g'} 부족`; tone='t-mut'; fill='f-warn'; }
-    return `<div class="sum-row">
-      <span class="sum-name">${r.name}</span>
-      <span class="sum-val">${r.got.toLocaleString()}<em> / ${r.tgt.toLocaleString()}${r.unit==='kcal'?'':'g'}</em></span>
-      <span class="sum-track"><span class="sum-fill ${fill}" style="width:${pct}%"></span></span>
-      <span class="sum-tag ${tone}">${tag}</span>
-    </div>`;
-  }).join('') + `<div class="sum-note">운동 소비는 체중·시간·강도로 낸 추정치입니다.
-    목표 칼로리에 이미 감량분이 잡혀 있으니, 태운 만큼 그대로 더 먹으면 그날 적자는 사라집니다.</div>`;
-  return wrap;
 }
 
 function renderMealAll(){
@@ -1517,6 +1607,19 @@ function ghConfigSheet(){
   showOverlay(ov);
 }
 let ghBusy=false, ghTimer=null;
+/* dataURL이면 잘라 쓰고, Blob(영상)이면 읽어서 base64로. 깃허브가 받아주는 크기를 넘으면 null */
+const GH_MAX=24*1024*1024;
+function toBase64(val){
+  return new Promise(res=>{
+    if(typeof val==='string') return res(val.split(',')[1]||'');
+    if(!(val instanceof Blob)) return res(null);
+    if(val.size>GH_MAX) return res(null);
+    const r=new FileReader();
+    r.onload=()=>res(String(r.result).split(',')[1]||'');
+    r.onerror=()=>res(null);
+    r.readAsDataURL(val);
+  });
+}
 function ghAutoBackupSoon(){
   if(!ghCfg().token) return;
   clearTimeout(ghTimer); ghTimer=setTimeout(()=>ghBackup(false),2500);
@@ -1527,25 +1630,30 @@ async function ghBackup(manual){
   if(ghBusy) return; ghBusy=true; ghStatusText('백업 중...');
   try{
     let up=0;
-    const photoOwners=[...meals.filter(m=>m.key), ...motiv.filter(v=>v.key)];
-    for(const m of photoOwners){
-      if(!photoSynced[m.key] && phCache[m.key]){
-        const b64=(phCache[m.key].split(',')[1])||'';
-        const res=await ghApi(`health/photos/${m.key}.jpg`,{method:'PUT',
-          body:JSON.stringify({message:`health photo ${m.key}`, content:b64, branch:c.branch||'main'})});
-        if(res.ok||res.status===422){
-          photoSynced[m.key]=true;
-          const raw=`https://raw.githubusercontent.com/${c.owner}/${c.repo}/${c.branch||'main'}/health/photos/${m.key}.jpg`;
-          if(m.slot!==undefined) m.url=raw; else m.url2=raw;
-          up++;
-        } else { throw new Error('사진 업로드 실패 '+res.status); }
-      }
+    // 업로드 대상: 식단 사진 + 동기부여 카드의 사진·영상 전부
+    const jobs=[];
+    meals.filter(m=>m.key).forEach(m=>jobs.push({key:m.key, ext:'jpg', set:u=>{m.url=u;}}));
+    motiv.forEach(v=>mvMedia(v).forEach(md=>{
+      jobs.push({key:md.key, ext:md.type==='video'?'mp4':'jpg', set:u=>{md.remote=u;}});
+    }));
+    for(const j of jobs){
+      if(photoSynced[j.key] || !phCache[j.key]) continue;
+      const b64=await toBase64(phCache[j.key]);
+      if(b64==null) continue;                       // 너무 큰 영상은 기기에만 둔다
+      const res=await ghApi(`health/photos/${j.key}.${j.ext}`,{method:'PUT',
+        body:JSON.stringify({message:`health media ${j.key}`, content:b64, branch:c.branch||'main'})});
+      if(res.ok||res.status===422){
+        photoSynced[j.key]=true;
+        j.set(`https://raw.githubusercontent.com/${c.owner}/${c.repo}/${c.branch||'main'}/health/photos/${j.key}.${j.ext}`);
+        up++;
+      } else { throw new Error('업로드 실패 '+res.status); }
     }
     if(up){ jSet(K_MEAL,meals); jSet('wl-motiv',motiv); }
     saveSynced();
     const manifest={updated:new Date().toISOString(), prof, log, tasks,
       meals:meals.map(m=>({id:m.id,d:m.d,slot:m.slot,memo:m.memo,key:m.key||null,url:m.url||null,nut:m.nut||null,rawPaste:m.rawPaste||null,fasted:!!m.fasted})),
-      motiv:motiv.map(v=>({id:v.id,d:v.d,key:v.key||null,note:v.note||'',url:v.url||'',url2:v.url2||null}))};
+      motiv:motiv.map(v=>({id:v.id,d:v.d,note:v.note||'',url:v.url||'',
+        media:mvMedia(v).map(md=>({key:md.key,type:md.type,remote:md.remote||null}))}))};
     let sha=null;
     const g=await ghApi('health/data.json',{method:'GET'});
     if(g.ok) sha=(await g.json()).sha;
@@ -1583,7 +1691,12 @@ async function ghPull(manual){
     jSet(K_MEAL,meals);
     const haveMv=new Set(motiv.map(v=>v.id));
     (man.motiv||[]).forEach(v=>{
-      if(!haveMv.has(v.id)){ motiv.push(v); if(v.url2&&v.key) phCache[v.key]=phCache[v.key]||v.url2; added++; }
+      if(!haveMv.has(v.id)){
+        motiv.push(v);
+        // 기기에 원본이 없으면 깃허브 원격 주소로 보여준다
+        mvMedia(v).forEach(md=>{ if(md.remote && !phCache[md.key]) phCache[md.key]=md.remote; });
+        added++;
+      }
     });
     jSet('wl-motiv',motiv);
     if(manual) toast(added? `⬇ ${added}개 불러옴` : '이미 최신 상태입니다');
