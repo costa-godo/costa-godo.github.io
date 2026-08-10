@@ -183,7 +183,8 @@
   .mv-img{width:100%; display:block; background:var(--raise);}
   .mv-body{padding:12px 13px 13px;}
   .mv-note{width:100%; background:none; border:none; color:var(--text); font-size:14px;
-    line-height:1.6; outline:none; resize:none; padding:0; font-family:inherit;}
+    line-height:1.6; outline:none; resize:none; padding:0; font-family:inherit;
+    overflow:hidden; display:block; min-height:2.2em;}
   .mv-note::placeholder{color:var(--dim);}
   .mv-link{display:flex; align-items:center; gap:8px; margin-top:9px; padding:10px 12px;
     background:var(--blue-bg); border-radius:11px; color:var(--blue);
@@ -222,7 +223,8 @@
   .m-ai:disabled{opacity:.55;}
   .m-del{color:var(--dim); font-size:14px;}
   .m-memo{flex:1; width:100%; background:none; border:none; color:var(--text);
-    font-size:13.5px; line-height:1.55; outline:none; resize:none; padding:0;}
+    font-size:13.5px; line-height:1.55; outline:none; resize:none; padding:0;
+    overflow:hidden; display:block; min-height:2.1em; font-family:inherit;}
   .m-memo::placeholder{color:var(--dim);}
 
   /* ===== 레벨 ===== */
@@ -488,6 +490,19 @@ const TODAY=dkey(now);
 
 /* ================= 유틸 ================= */
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+/* 줄바꿈하면 칸이 같이 늘어나도록 */
+function autoGrow(ta){
+  if(!ta) return;
+  ta.style.height='auto';
+  ta.style.height=(ta.scrollHeight+2)+'px';
+}
+function bindAutoGrow(ta){
+  if(!ta) return;
+  autoGrow(ta);
+  ta.addEventListener('input',()=>autoGrow(ta));
+  // 카드가 화면에 그려진 뒤 실제 높이로 한 번 더 맞춘다
+  requestAnimationFrame(()=>autoGrow(ta));
+}
 function toast(m){const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show');
   clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1900);}
 function ask(msg,yes){
@@ -828,7 +843,9 @@ function buildMealCard(m, onChange){
     ov.onclick=()=>ov.remove(); document.body.appendChild(ov);
   };
   let t=null;
-  card.querySelector('.m-memo').addEventListener('input',e=>{
+  const memoTa=card.querySelector('.m-memo');
+  bindAutoGrow(memoTa);
+  memoTa.addEventListener('input',e=>{
     m.memo=e.target.value; clearTimeout(t); t=setTimeout(()=>{jSet(K_MEAL,meals); ghAutoBackupSoon();},350);
   });
   const aiBtn=card.querySelector('.m-ai');
@@ -866,13 +883,14 @@ function pasteSheet(m,onChange){
       사진을 채팅창에 올리고 받은 분석 내용을 그대로 여기 붙여넣으면,
       칼로리·단백질·지방·탄수만 뽑아서 정리해 줍니다.</div>
     <textarea id="pTxt" rows="5" placeholder="예) 김치찌개 · 약 450kcal, 단백질 28g, 지방 18g, 탄수화물 40g"
-      style="width:100%;padding:12px;border-radius:11px;border:1.5px solid transparent;background:var(--raise);color:var(--text);font-size:14px;line-height:1.6;outline:none;resize:vertical;font-family:inherit">${esc(m.rawPaste||'')}</textarea>
+      style="width:100%;padding:12px;border-radius:11px;border:1.5px solid transparent;background:var(--raise);color:var(--text);font-size:14px;line-height:1.6;outline:none;resize:none;overflow:hidden;font-family:inherit">${esc(m.rawPaste||'')}</textarea>
     <div id="pPrev" style="margin-top:11px"></div>
     <div class="dlg-btns"><button class="dlg-b" data-r="n">취소</button>
       <button class="dlg-b p" data-r="y">정리해서 저장</button></div>
   </div>`;
   const ta=ov.querySelector('#pTxt');
   const prev=ov.querySelector('#pPrev');
+  bindAutoGrow(ta);
   const paint=()=>{
     const n=parseNutrition(ta.value);
     prev.innerHTML = n
@@ -1136,7 +1154,9 @@ function renderMotiv(){
       };
     }
     let t=null;
-    card.querySelector('.mv-note').addEventListener('input',e=>{
+    const noteTa=card.querySelector('.mv-note');
+    bindAutoGrow(noteTa);
+    noteTa.addEventListener('input',e=>{
       v.note=e.target.value; clearTimeout(t);
       t=setTimeout(()=>{jSet('wl-motiv',motiv); ghAutoBackupSoon();},350);
     });
