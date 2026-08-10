@@ -393,6 +393,46 @@
     transition:.2s; z-index:400; white-space:nowrap;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
+  /* ===== 공복 타이머 ===== */
+  .fast-card{padding:16px;}
+  .fast-top{display:flex; align-items:center; margin-bottom:12px;}
+  .fast-t{flex:1; font-size:12px; font-weight:800; letter-spacing:.04em; color:var(--dim);}
+  .fast-info{font-size:11.5px; font-weight:700; color:var(--blue);
+    background:var(--blue-bg); padding:5px 11px; border-radius:20px;}
+  .fast-idle{font-size:13px; color:var(--muted); line-height:1.5; margin-bottom:12px;}
+  .fast-goals{display:grid; grid-template-columns:repeat(4,1fr); gap:7px;}
+  .fast-goals button{padding:13px 2px; border-radius:12px; background:var(--raise);
+    border:1.5px solid transparent; font-size:13.5px; font-weight:800; color:var(--text);}
+  .fast-goals button:active{transform:scale(.97);}
+  .fast-last{margin-top:12px; padding-top:11px; border-top:.5px solid var(--border);
+    font-size:11.5px; color:var(--dim);}
+  .fast-last b{color:var(--text); font-family:var(--mono);}
+  .fast-main{position:relative; display:flex; align-items:center; justify-content:center;
+    margin:4px 0 14px;}
+  .fast-ring{width:168px; height:168px; transform:rotate(-90deg);}
+  .fr-bg{fill:none; stroke:var(--raise); stroke-width:9;}
+  .fr-fg{fill:none; stroke:var(--blue); stroke-width:9; stroke-linecap:round;
+    transition:stroke-dashoffset .9s linear;}
+  .fr-fg.done{stroke:var(--acc);}
+  .fast-mid{position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:5px;}
+  .fast-time{font-family:var(--mono); font-size:27px; font-weight:800; letter-spacing:-.02em;}
+  .fast-goal{font-size:11px; font-weight:700; color:var(--muted); text-align:center;}
+  .fast-stage{background:var(--raise); border-radius:12px; padding:12px 13px; margin-bottom:12px;}
+  .fs-now{font-size:12.5px; font-weight:800; color:var(--blue); margin-bottom:5px;}
+  .fs-txt{font-size:12.5px; color:var(--muted); line-height:1.6;}
+  .fs-next{font-size:11px; color:var(--dim); margin-top:7px; font-family:var(--mono);}
+  .fast-stop{width:100%; padding:13px; border-radius:12px; background:var(--raise);
+    color:var(--red); font-size:14px; font-weight:800;}
+  .fs-list{max-height:44vh; overflow-y:auto; margin-bottom:12px;}
+  .fs-item{padding:10px 0; border-top:.5px solid var(--border);}
+  .fs-item:first-child{border-top:none;}
+  .fs-item.done .fs-h{color:var(--acc);}
+  .fs-h{font-size:13px; font-weight:800; margin-bottom:3px;}
+  .fs-d{font-size:12px; color:var(--muted); line-height:1.55;}
+  .fs-warn{font-size:11px; color:var(--dim); line-height:1.6; background:var(--raise);
+    border-radius:11px; padding:11px 12px;}
+
   /* ===== 하단 네비게이션 ===== */
   nav.bottom{position:fixed; left:0; right:0; bottom:0; z-index:50;
     display:flex; justify-content:center; background:rgba(255,255,255,.86);
@@ -428,6 +468,7 @@
 <main>
   <div class="page on" id="p-today">
     <div id="macroCard"></div>
+    <div id="fastCard"></div>
     <div id="todayEditor"></div>
   </div>
 
@@ -1713,7 +1754,7 @@ async function ghBackup(manual){
     }
     if(up){ jSet(K_MEAL,meals); jSet('wl-motiv',motiv); }
     saveSynced();
-    const manifest={updated:new Date().toISOString(), prof, log, tasks,
+    const manifest={updated:new Date().toISOString(), prof, log, tasks, fastHist,
       meals:meals.map(m=>({id:m.id,d:m.d,slot:m.slot,memo:m.memo,key:m.key||null,url:m.url||null,nut:m.nut||null,rawPaste:m.rawPaste||null,fasted:!!m.fasted})),
       motiv:motiv.map(v=>({id:v.id,d:v.d,note:v.note||'',url:v.url||'',
         media:mvMedia(v).map(md=>({key:md.key,type:md.type,remote:md.remote||null}))}))};
@@ -1762,10 +1803,150 @@ async function ghPull(manual){
       }
     });
     jSet('wl-motiv',motiv);
+    const haveF=new Set(fastHist.map(f=>f.start));
+    (man.fastHist||[]).forEach(f=>{ if(!haveF.has(f.start)){ fastHist.push(f); added++; } });
+    fastHist.sort((a,b)=>b.start-a.start); fastHist=fastHist.slice(0,30);
+    jSet('wl-fast-hist',fastHist);
     if(manual) toast(added? `⬇ ${added}개 불러옴` : '이미 최신 상태입니다');
     // 방금 서버에서 받아온 내용이므로 되쓰기(백업)를 걸지 않는다
     onDataChanged({backup:false});
   }catch(err){ if(manual) toast('불러오기 실패 — 깃허브 설정 확인'); }
+}
+
+/* ================= 공복 타이머 =================
+   구간마다 몸에서 일어나는 일을 단계로 보여준다.
+   목표는 24시간까지만 고를 수 있게 했다 — 그 이상은 참고용 단계로만 표시. */
+const FAST_STAGES=[
+  {h:0,  name:'시작',    desc:'마지막 식사 이후 소화·흡수가 진행되는 구간입니다.'},
+  {h:12, name:'12시간',  desc:'간 글리코겐이 거의 소모되고 케톤이 올라오기 시작합니다. 체지방 연소가 시작되는 지점.'},
+  {h:16, name:'16시간',  desc:'16:8 구간. 케톤과 지방 연소율이 올라가고 혈당·인슐린이 안정적으로 유지됩니다.'},
+  {h:18, name:'18시간',  desc:'케톤이 크게 늘고 체지방 연소가 눈에 띄게 올라갑니다. 인슐린 수치도 내려갑니다.'},
+  {h:24, name:'24시간',  desc:'인슐린 저항성 개선 구간. 자가포식(오토파지)이 시작되는 지점으로 알려져 있습니다.'},
+  {h:48, name:'48시간',  desc:'손상된 세포 청소·재생이 활발해진다고 보는 구간. 전문가 지도가 필요합니다.'},
+  {h:72, name:'72시간',  desc:'성장호르몬이 크게 오르지만 이후 지방 연소율은 서서히 떨어집니다. 반드시 전문가와 함께.'},
+];
+const FAST_GOALS=[12,16,18,24];
+let fastState=jGet('wl-fast', null);      // {start: ms, goalH}
+let fastHist=jGet('wl-fast-hist', []);
+let fastTimer=null;
+
+function fastElapsed(){
+  if(!fastState) return 0;
+  return Math.max(0, Date.now()-fastState.start);
+}
+function fmtDur(ms){
+  const s=Math.floor(ms/1000);
+  return `${p2(Math.floor(s/3600))}:${p2(Math.floor(s%3600/60))}:${p2(s%60)}`;
+}
+function fastStage(hours){
+  let cur=FAST_STAGES[0], next=null;
+  for(let i=0;i<FAST_STAGES.length;i++){
+    if(hours>=FAST_STAGES[i].h){ cur=FAST_STAGES[i]; next=FAST_STAGES[i+1]||null; }
+  }
+  return {cur,next};
+}
+function fastStart(goalH){
+  fastState={start:Date.now(), goalH};
+  jSet('wl-fast',fastState); renderFastCard(); ghAutoBackupSoon();
+  toast(`공복 ${goalH}시간 시작`);
+}
+function fastStop(){
+  const ms=fastElapsed();
+  const hours=+(ms/3600000).toFixed(2);
+  ask(`${fmtDur(ms)} 기록하고 종료할까요?`,()=>{
+    fastHist.unshift({d:TODAY, start:fastState.start, end:Date.now(), hours, goalH:fastState.goalH});
+    fastHist=fastHist.slice(0,30);
+    jSet('wl-fast-hist',fastHist);
+    fastState=null; jSet('wl-fast',null);
+    renderFastCard(); ghAutoBackupSoon();
+    toast(`${hours.toFixed(1)}시간 기록됨`);
+  });
+}
+function fastStageSheet(){
+  const ov=document.createElement('div'); ov.className='ov';
+  const h=fastElapsed()/3600000;
+  ov.innerHTML=`<div class="dlg" style="max-width:340px">
+    <div class="dlg-t">공복 시간별 몸의 변화</div>
+    <div class="fs-list">
+      ${FAST_STAGES.slice(1).map(s=>`
+        <div class="fs-item${h>=s.h?' done':''}">
+          <div class="fs-h">${s.name}${h>=s.h?' ✓':''}</div>
+          <div class="fs-d">${s.desc}</div>
+        </div>`).join('')}
+    </div>
+    <div class="fs-warn">24시간을 넘는 단식은 전문가 지도 아래에서 하세요.
+      약을 드시는 중이거나 혈당을 관리 중이라면 시작 전에 담당의와 상의가 필요합니다.
+      단식 중 몸이 안 좋으면 바로 중단하고, 끝낸 뒤에는 죽·미음보다 단백질과 채소가 든 식사가 낫습니다.</div>
+    <div class="dlg-btns"><button class="dlg-b p" data-r="n" style="width:100%">닫기</button></div>
+  </div>`;
+  ov.addEventListener('click',e=>{
+    const r=e.target.dataset&&e.target.dataset.r;
+    if(r==='n'||e.target===ov) ov.remove();
+  });
+  showOverlay(ov);
+}
+function renderFastCard(){
+  const el=document.getElementById('fastCard');
+  if(!el) return;
+  clearInterval(fastTimer); fastTimer=null;
+
+  if(!fastState){
+    const last=fastHist[0];
+    el.innerHTML=`<div class="card fast-card">
+      <div class="fast-top"><span class="fast-t">공복 타이머</span>
+        <button class="fast-info" id="fInfo">단계 보기</button></div>
+      <div class="fast-idle">지금부터 재기 시작합니다. 목표를 고르세요.</div>
+      <div class="fast-goals">${FAST_GOALS.map(g=>`<button data-g="${g}">${g}시간</button>`).join('')}</div>
+      ${last?`<div class="fast-last">최근 기록 · ${shortD(last.d)} <b>${last.hours.toFixed(1)}시간</b></div>`:''}
+    </div>`;
+    el.querySelector('#fInfo').onclick=fastStageSheet;
+    el.querySelectorAll('.fast-goals button').forEach(b=>b.onclick=()=>fastStart(+b.dataset.g));
+    return;
+  }
+
+  const R=52, C=2*Math.PI*R;
+  el.innerHTML=`<div class="card fast-card run">
+    <div class="fast-top"><span class="fast-t">공복 진행 중</span>
+      <button class="fast-info" id="fInfo">단계 보기</button></div>
+    <div class="fast-main">
+      <svg class="fast-ring" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="${R}" class="fr-bg"></circle>
+        <circle cx="60" cy="60" r="${R}" class="fr-fg" id="frFg"
+          stroke-dasharray="${C}" stroke-dashoffset="${C}"></circle>
+      </svg>
+      <div class="fast-mid">
+        <div class="fast-time" id="fTime">00:00:00</div>
+        <div class="fast-goal" id="fGoal"></div>
+      </div>
+    </div>
+    <div class="fast-stage" id="fStage"></div>
+    <div class="fast-actions">
+      <button class="fast-stop" id="fStop">종료하고 기록</button>
+    </div>
+  </div>`;
+  el.querySelector('#fInfo').onclick=fastStageSheet;
+  el.querySelector('#fStop').onclick=fastStop;
+
+  const fg=el.querySelector('#frFg');
+  const tick=()=>{
+    if(!fastState){ clearInterval(fastTimer); return; }
+    const ms=fastElapsed(), h=ms/3600000;
+    const pct=Math.min(1, h/fastState.goalH);
+    fg.style.strokeDashoffset=String(C*(1-pct));
+    fg.classList.toggle('done', pct>=1);
+    const tEl=el.querySelector('#fTime'); if(tEl) tEl.textContent=fmtDur(ms);
+    const gEl=el.querySelector('#fGoal');
+    if(gEl) gEl.innerHTML = pct>=1
+      ? `목표 ${fastState.goalH}시간 달성 🎉`
+      : `목표 ${fastState.goalH}시간 · ${Math.round(pct*100)}%`;
+    const {cur,next}=fastStage(h);
+    const sEl=el.querySelector('#fStage');
+    if(sEl) sEl.innerHTML=`<div class="fs-now">${cur.name} 구간</div>
+      <div class="fs-txt">${cur.desc}</div>
+      ${next?`<div class="fs-next">다음 단계 ${next.name}까지 ${fmtDur((next.h-h)*3600000)}</div>`:''}`;
+  };
+  tick();
+  fastTimer=setInterval(tick,1000);
 }
 
 /* ================= 칼로리 계산기 =================
@@ -1951,7 +2132,8 @@ document.querySelectorAll('nav.bottom button').forEach(t=>t.onclick=()=>{
 
 let curTab='today';
 function renderTab(t){
-  if(t==='today'){ renderMacroCard(); renderDayEditor(document.getElementById('todayEditor'), TODAY); }
+  if(t!=='today'){ clearInterval(fastTimer); fastTimer=null; }
+  if(t==='today'){ renderMacroCard(); renderFastCard(); renderDayEditor(document.getElementById('todayEditor'), TODAY); }
   else if(t==='level')   renderLevel();
   else if(t==='records') renderRecords();
   else if(t==='meal')    renderMealAll();
