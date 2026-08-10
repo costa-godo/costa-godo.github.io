@@ -1543,6 +1543,69 @@ function renderMotiv(){
   });
 }
 
+/* 하루 영양 요약 카드.
+   단백질·지방·식이섬유는 초과해도 괜찮으니 초과=초록, 부족=주황.
+   탄수화물은 초과하면 안 되므로 초과=빨강, 여유 있으면 초록.
+   칼로리는 순 칼로리(섭취−운동) 기준, 초과=주황. */
+function buildDaySummary(dateKey){
+  const mt=prof.macroTarget;
+  const wrap=document.createElement('div'); wrap.className='sum-card';
+  const it=dayIntake(dateKey);
+  const isToday=dateKey===TODAY;
+  const dt=parseD(dateKey);
+  const head=`<div class="sum-head">
+      <span class="sum-day">${isToday?'오늘':`${dt.getMonth()+1}월 ${dt.getDate()}일`}</span>
+      ${it.fasting?`<span class="sum-fast">공복 ${it.fastedSlots.join('·')}</span>`:''}
+      <span class="sum-meta">${it.n?`${it.n}끼 기록`:'기록 없음'}</span>
+    </div>`;
+  if(!mt){
+    wrap.innerHTML=head+`<div class="sum-none">⚙ 설정 → 칼로리 계산기로 목표를 먼저 정하면
+      여기에 부족·초과가 계산되어 표시됩니다.</div>`;
+    return wrap;
+  }
+  const bn=dayBurn(dateKey);
+  const net=it.kcal-bn.kcal;
+  const rows=[
+    {name:'칼로리', got:net,        tgt:mt.kcal,    unit:'kcal', overBad:'warn'},
+    {name:'단백질', got:it.protein, tgt:mt.protein, unit:'g',    overBad:'good'},
+    {name:'지방',   got:it.fat,     tgt:mt.fat,     unit:'g',    overBad:'good'},
+    {name:'탄수',   got:it.carbs,   tgt:mt.carbs,   unit:'g',    overBad:'bad'},
+    {name:'식이섬유',got:it.fiber,  tgt:mt.fiber,   unit:'g',    overBad:'good'},
+  ];
+  const eq=`<div class="sum-eq">
+      <span>섭취 <b>${it.kcal.toLocaleString()}</b></span>
+      <span class="op">−</span>
+      <span>운동 <b class="burn">${bn.kcal.toLocaleString()}</b></span>
+      <span class="op">=</span>
+      <span class="tot">${net.toLocaleString()}<em>kcal</em></span>
+    </div>`;
+  wrap.innerHTML = head + eq + rows.map(r=>{
+    const diff=r.got-r.tgt;
+    const pct=Math.max(0, Math.min(100, r.tgt? Math.round(r.got/r.tgt*100):0));
+    let tag,tone,fill;
+    if(diff>0){
+      tag=`+${Math.abs(diff).toLocaleString()}${r.unit==='kcal'?'':'g'} 초과`;
+      tone = r.overBad==='good' ? 't-good' : (r.overBad==='bad' ? 't-bad' : 't-warn');
+      fill = r.overBad==='good' ? 'f-good' : (r.overBad==='bad' ? 'f-bad' : 'f-warn');
+    } else if(diff<0){
+      tag=`−${Math.abs(diff).toLocaleString()}${r.unit==='kcal'?'':'g'} 부족`;
+      tone = r.overBad==='bad' ? 't-good' : 't-warn';
+      fill = r.overBad==='bad' ? 'f-good' : 'f-warn';
+    } else {
+      tag='딱 맞음'; tone='t-good'; fill='f-good';
+    }
+    if(r.got<=0 && it.n===0 && bn.kcal===0){ tag=`−${r.tgt.toLocaleString()}${r.unit==='kcal'?'':'g'} 부족`; tone='t-mut'; fill='f-warn'; }
+    return `<div class="sum-row">
+      <span class="sum-name">${r.name}</span>
+      <span class="sum-val">${r.got.toLocaleString()}<em> / ${r.tgt.toLocaleString()}${r.unit==='kcal'?'':'g'}</em></span>
+      <span class="sum-track"><span class="sum-fill ${fill}" style="width:${pct}%"></span></span>
+      <span class="sum-tag ${tone}">${tag}</span>
+    </div>`;
+  }).join('') + `<div class="sum-note">운동 소비는 체중·시간·강도로 낸 추정치입니다.
+    목표 칼로리에 이미 감량분이 잡혀 있으니, 태운 만큼 그대로 더 먹으면 그날 적자는 사라집니다.</div>`;
+  return wrap;
+}
+
 function renderMealAll(){
   const list=document.getElementById('mealAll');
   list.innerHTML='';
