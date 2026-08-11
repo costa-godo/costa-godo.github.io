@@ -245,6 +245,11 @@
   .mv-btn{font-size:11.5px; font-weight:700; color:var(--muted); background:var(--raise);
     padding:6px 11px; border-radius:20px;}
   .mv-btn.del{color:var(--red);}
+  .mv-btn.pin.on{background:var(--amber-bg); color:var(--amber);}
+  .mv-card.pinned{border:1.5px solid var(--amber);}
+  .mv-card.dragging{opacity:.9; transform:scale(1.02);
+    box-shadow:0 10px 28px rgba(0,0,0,.18); position:relative; z-index:5;}
+  .mv-card{transition:transform .16s ease, box-shadow .16s ease;}
   .add-row{display:flex; gap:7px; margin-top:11px;}
   .add-row input{flex:1; min-width:0; background:var(--raise); border:1.5px solid transparent;
     border-radius:11px; padding:11px; color:var(--text); font-size:14px; outline:none;}
@@ -411,13 +416,49 @@
     margin:4px 0 14px;}
   .fast-ring{width:168px; height:168px; transform:rotate(-90deg);}
   .fr-bg{fill:none; stroke:var(--raise); stroke-width:9;}
-  .fr-fg{fill:none; stroke:var(--blue); stroke-width:9; stroke-linecap:round;
-    transition:stroke-dashoffset .9s linear;}
-  .fr-fg.done{stroke:var(--acc);}
+  .fr-fg{fill:none; stroke:#FF3B30; stroke-width:9; stroke-linecap:round;
+    transition:stroke-dashoffset .95s linear, stroke .4s ease;
+    filter:drop-shadow(0 0 5px rgba(255,59,48,.45));}
+  .fr-fg.done{stroke:var(--acc); filter:drop-shadow(0 0 6px rgba(48,209,88,.5));}
   .fast-mid{position:absolute; inset:0; display:flex; flex-direction:column;
     align-items:center; justify-content:center; gap:5px;}
-  .fast-time{font-family:var(--mono); font-size:27px; font-weight:800; letter-spacing:-.02em;}
-  .fast-goal{font-size:11px; font-weight:700; color:var(--muted); text-align:center;}
+  .fast-left{font-family:var(--mono); font-size:29px; font-weight:800; letter-spacing:-.03em;}
+  .fast-sub{font-size:10.5px; font-weight:700; color:var(--muted); text-align:center; line-height:1.5;}
+  .fs-el{font-family:var(--mono); color:var(--dim); font-weight:600;}
+  .fast-actions{display:grid; grid-template-columns:repeat(3,1fr); gap:7px;}
+  .fa-btn{padding:12px 2px; border-radius:12px; background:var(--raise);
+    font-size:12.5px; font-weight:800; color:var(--text);}
+  .fa-btn.stop{color:var(--red);}
+  .fa-btn:active{transform:scale(.97);}
+  .fast-goals button.on{background:var(--red-bg); color:var(--red);}
+  .calc-warn{margin-top:10px; font-size:10.5px; color:rgba(255,255,255,.55); line-height:1.5;}
+  .cal-note{font-size:11px; color:var(--dim); line-height:1.6; margin-bottom:12px;}
+  .cal-note b{color:var(--text);}
+  .cal-lbl{display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px;}
+  .cal-need{font-size:12px; color:var(--dim); padding:14px; background:var(--raise);
+    border-radius:12px; text-align:center;}
+  .act-seg{display:grid; grid-template-columns:repeat(2,1fr); gap:7px; margin-bottom:14px;}
+  .act-seg button{padding:10px 4px; border-radius:11px; background:var(--raise);
+    border:1.5px solid transparent; color:var(--muted); text-align:center;}
+  .act-seg button b{display:block; font-size:12.5px; font-weight:800;}
+  .act-seg button span{display:block; font-size:9.5px; margin-top:2px; opacity:.8;}
+  .act-seg button.on, .lv-seg button.on{background:var(--acc-bg); border-color:var(--acc); color:var(--acc);}
+  .lv-seg button b{display:block; font-size:13px; font-weight:800;}
+  .lv-seg button span{display:block; font-size:9.5px; margin-top:1px; opacity:.8;}
+  /* 공복 기록 리스트 */
+  .fh-list{display:flex; flex-direction:column; gap:9px;}
+  .fh-row{display:flex; align-items:center; gap:10px;}
+  .fh-d{flex:none; width:36px; font-family:var(--mono); font-size:10.5px;
+    font-weight:700; color:var(--dim);}
+  .fh-mid{flex:1; min-width:0;}
+  .fh-bar{height:7px; border-radius:5px; background:var(--raise); overflow:hidden;}
+  .fh-fill{height:100%; background:var(--amber); border-radius:5px;}
+  .fh-fill.ok{background:var(--acc);}
+  .fh-t{font-family:var(--mono); font-size:9.5px; color:var(--dim); margin-top:4px;}
+  .fh-h{flex:none; font-family:var(--mono); font-size:13px; font-weight:800; color:var(--amber);}
+  .fh-h.ok{color:var(--acc);}
+  .fh-h span{font-size:9.5px; color:var(--dim); font-weight:600;}
+  .fh-more{margin-top:11px; font-size:10.5px; color:var(--dim); text-align:center;}
   .fast-stage{background:var(--raise); border-radius:12px; padding:12px 13px; margin-bottom:12px;}
   .fs-now{font-size:12.5px; font-weight:800; color:var(--blue); margin-bottom:5px;}
   .fs-txt{font-size:12.5px; color:var(--muted); line-height:1.6;}
@@ -470,6 +511,7 @@
     <div id="macroCard"></div>
     <div id="fastCard"></div>
     <div id="todayEditor"></div>
+    <div id="fastHist"></div>
   </div>
 
   <div class="page" id="p-level">
@@ -1538,15 +1580,84 @@ function openLightbox(mediaList, start){
   paint(); showOverlay(ov);
 }
 
+/* 고정된 카드가 항상 위로 */
+function mvSort(){
+  motiv.sort((a,b)=>{
+    if(!!a.pin!==!!b.pin) return a.pin? -1 : 1;
+    return 0;
+  });
+  jSet('wl-motiv',motiv);
+}
+
+/* 꾹 누르면 카드를 집어서 위아래로 옮긴다 */
+let dragItem=null, dragEl=null, dragTimer=null;
+function bindLongPressDrag(card, v){
+  const start=e=>{
+    if(e.target.closest('button,textarea,a,video,input')) return;
+    const pt=e.touches? e.touches[0] : e;
+    dragTimer=setTimeout(()=>{
+      dragItem=v; dragEl=card;
+      card.classList.add('dragging');
+      if(navigator.vibrate) navigator.vibrate(30);
+      document.body.style.overflow='hidden';
+    },420);
+    card._sy=pt.clientY;
+  };
+  const move=e=>{
+    const pt=e.touches? e.touches[0] : e;
+    if(!dragEl){
+      if(Math.abs(pt.clientY-card._sy)>10){ clearTimeout(dragTimer); }
+      return;
+    }
+    if(dragEl!==card) return;
+    e.preventDefault();
+    const list=document.getElementById('mvList');
+    const cards=[...list.querySelectorAll('.mv-card')];
+    const over=cards.find(c=>{
+      if(c===card) return false;
+      const r=c.getBoundingClientRect();
+      return pt.clientY>r.top && pt.clientY<r.bottom;
+    });
+    if(over){
+      const r=over.getBoundingClientRect();
+      const after=pt.clientY > r.top+r.height/2;
+      list.insertBefore(card, after? over.nextSibling : over);
+    }
+  };
+  const end=()=>{
+    clearTimeout(dragTimer);
+    if(!dragEl || dragEl!==card) return;
+    card.classList.remove('dragging');
+    document.body.style.overflow='';
+    // 화면에 보이는 순서를 그대로 데이터에 반영
+    const order=[...document.querySelectorAll('#mvList .mv-card')].map(c=>c.dataset.mid);
+    motiv.sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id));
+    mvSort(); jSet('wl-motiv',motiv); ghAutoBackupSoon();
+    dragItem=null; dragEl=null;
+    renderMotiv(); toast('순서 변경됨');
+  };
+  card.addEventListener('touchstart',start,{passive:true});
+  card.addEventListener('touchmove',move,{passive:false});
+  card.addEventListener('touchend',end);
+  card.addEventListener('touchcancel',end);
+  card.addEventListener('mousedown',start);
+  card.addEventListener('mousemove',move);
+  card.addEventListener('mouseup',end);
+  card.addEventListener('mouseleave',()=>clearTimeout(dragTimer));
+}
+
 function renderMotiv(){
   const list=document.getElementById('mvList');
   list.innerHTML='';
+  mvSort();
   if(!motiv.length){
     list.innerHTML='<div class="empty">아직 비어 있습니다.<br>자극되는 사진·영상, 다짐 한 줄, 참고 링크를<br>여기에 모아두세요.</div>';
     return;
   }
   motiv.forEach(v=>{
-    const card=document.createElement('div'); card.className='mv-card';
+    const card=document.createElement('div');
+    card.className='mv-card'+(v.pin?' pinned':'');
+    card.dataset.mid=v.id;
     const media=mvMedia(v);
     if(media.length) card.appendChild(buildCarousel(media, n=>openLightbox(media,n)));
     const body=document.createElement('div'); body.className='mv-body';
@@ -1554,9 +1665,10 @@ function renderMotiv(){
       <textarea class="mv-note" rows="2" placeholder="여기에 메모를 적으세요">${esc(v.note||'')}</textarea>
       ${v.url? `<a class="mv-link" href="${esc(v.url)}" target="_blank" rel="noopener">🔗 ${esc(v.url)}</a>`:''}
       <div class="mv-foot">
+        <button class="mv-btn pin${v.pin?' on':''}">${v.pin?'📌 고정됨':'📌 고정'}</button>
         <span class="mv-date">${shortD(v.d)}${media.length>1?` · ${media.length}개`:''}</span>
-        <button class="mv-btn add">＋ 추가</button>
-        <button class="mv-btn edit">${v.url?'링크':'링크'}</button>
+        <button class="mv-btn add">＋</button>
+        <button class="mv-btn edit">링크</button>
         <button class="mv-btn del">삭제</button>
       </div>`;
     card.appendChild(body);
@@ -1567,7 +1679,12 @@ function renderMotiv(){
       v.note=e.target.value; clearTimeout(t);
       t=setTimeout(()=>{jSet('wl-motiv',motiv); ghAutoBackupSoon();},350);
     });
+    body.querySelector('.pin').onclick=()=>{
+      v.pin=!v.pin; jSet('wl-motiv',motiv); mvSort(); renderMotiv(); ghAutoBackupSoon();
+      toast(v.pin?'상단 고정':'고정 해제');
+    };
     body.querySelector('.add').onclick=()=>{ mvTarget=v; document.getElementById('mvIn').click(); };
+    bindLongPressDrag(card, v);
     body.querySelector('.edit').onclick=()=>mvLinkSheet(v);
     body.querySelector('.del').onclick=()=>ask(
       media.length? `사진·영상 ${media.length}개가 함께 삭제됩니다.\n삭제할까요?` : '이 항목을 삭제할까요?',
@@ -1832,7 +1949,8 @@ let fastTimer=null;
 
 function fastElapsed(){
   if(!fastState) return 0;
-  return Math.max(0, Date.now()-fastState.start);
+  const end = fastState.pausedAt || Date.now();
+  return Math.max(0, end - fastState.start - (fastState.paused||0));
 }
 function fmtDur(ms){
   const s=Math.floor(ms/1000);
@@ -1846,7 +1964,7 @@ function fastStage(hours){
   return {cur,next};
 }
 function fastStart(goalH){
-  fastState={start:Date.now(), goalH};
+  fastState={start:Date.now(), goalH, paused:0, pausedAt:null};
   jSet('wl-fast',fastState); renderFastCard(); ghAutoBackupSoon();
   toast(`공복 ${goalH}시간 시작`);
 }
@@ -1891,54 +2009,62 @@ function renderFastCard(){
   clearInterval(fastTimer); fastTimer=null;
 
   if(!fastState){
-    const last=fastHist[0];
     el.innerHTML=`<div class="card fast-card">
       <div class="fast-top"><span class="fast-t">공복 타이머</span>
         <button class="fast-info" id="fInfo">단계 보기</button></div>
-      <div class="fast-idle">지금부터 재기 시작합니다. 목표를 고르세요.</div>
+      <div class="fast-idle">목표를 고르면 남은 시간이 거꾸로 흐릅니다.</div>
       <div class="fast-goals">${FAST_GOALS.map(g=>`<button data-g="${g}">${g}시간</button>`).join('')}</div>
-      ${last?`<div class="fast-last">최근 기록 · ${shortD(last.d)} <b>${last.hours.toFixed(1)}시간</b></div>`:''}
     </div>`;
     el.querySelector('#fInfo').onclick=fastStageSheet;
     el.querySelectorAll('.fast-goals button').forEach(b=>b.onclick=()=>fastStart(+b.dataset.g));
+    renderFastHist();
     return;
   }
 
   const R=52, C=2*Math.PI*R;
+  const paused=!!fastState.pausedAt;
   el.innerHTML=`<div class="card fast-card run">
-    <div class="fast-top"><span class="fast-t">공복 진행 중</span>
+    <div class="fast-top"><span class="fast-t">${paused?'일시정지됨':'공복 진행 중'}</span>
       <button class="fast-info" id="fInfo">단계 보기</button></div>
     <div class="fast-main">
       <svg class="fast-ring" viewBox="0 0 120 120">
         <circle cx="60" cy="60" r="${R}" class="fr-bg"></circle>
         <circle cx="60" cy="60" r="${R}" class="fr-fg" id="frFg"
-          stroke-dasharray="${C}" stroke-dashoffset="${C}"></circle>
+          stroke-dasharray="${C}" stroke-dashoffset="0"></circle>
       </svg>
       <div class="fast-mid">
-        <div class="fast-time" id="fTime">00:00:00</div>
-        <div class="fast-goal" id="fGoal"></div>
+        <div class="fast-left" id="fLeft">--:--:--</div>
+        <div class="fast-sub" id="fSub"></div>
       </div>
     </div>
     <div class="fast-stage" id="fStage"></div>
     <div class="fast-actions">
-      <button class="fast-stop" id="fStop">종료하고 기록</button>
+      <button class="fa-btn" id="fPause">${paused?'▶ 이어서':'⏸ 멈춤'}</button>
+      <button class="fa-btn" id="fEdit">시간 변경</button>
+      <button class="fa-btn stop" id="fStop">종료·기록</button>
     </div>
   </div>`;
   el.querySelector('#fInfo').onclick=fastStageSheet;
   el.querySelector('#fStop').onclick=fastStop;
+  el.querySelector('#fPause').onclick=fastTogglePause;
+  el.querySelector('#fEdit').onclick=fastEditGoal;
 
   const fg=el.querySelector('#frFg');
   const tick=()=>{
     if(!fastState){ clearInterval(fastTimer); return; }
     const ms=fastElapsed(), h=ms/3600000;
-    const pct=Math.min(1, h/fastState.goalH);
-    fg.style.strokeDashoffset=String(C*(1-pct));
-    fg.classList.toggle('done', pct>=1);
-    const tEl=el.querySelector('#fTime'); if(tEl) tEl.textContent=fmtDur(ms);
-    const gEl=el.querySelector('#fGoal');
-    if(gEl) gEl.innerHTML = pct>=1
-      ? `목표 ${fastState.goalH}시간 달성 🎉`
-      : `목표 ${fastState.goalH}시간 · ${Math.round(pct*100)}%`;
+    const totalMs=fastState.goalH*3600000;
+    const leftMs=totalMs-ms;
+    const pct=Math.min(1, Math.max(0, ms/totalMs));
+    // 남은 만큼만 원이 차 있고, 시간이 갈수록 줄어든다
+    fg.style.strokeDashoffset=String(C*pct);
+    fg.classList.toggle('done', leftMs<=0);
+    const lEl=el.querySelector('#fLeft');
+    if(lEl) lEl.textContent = leftMs>0 ? fmtDur(leftMs) : '+'+fmtDur(-leftMs);
+    const sEl2=el.querySelector('#fSub');
+    if(sEl2) sEl2.innerHTML = leftMs>0
+      ? `목표 ${fastState.goalH}시간까지 남음<br><span class="fs-el">경과 ${fmtDur(ms)}</span>`
+      : `목표 ${fastState.goalH}시간 달성 🎉<br><span class="fs-el">경과 ${fmtDur(ms)}</span>`;
     const {cur,next}=fastStage(h);
     const sEl=el.querySelector('#fStage');
     if(sEl) sEl.innerHTML=`<div class="fs-now">${cur.name} 구간</div>
@@ -1946,7 +2072,78 @@ function renderFastCard(){
       ${next?`<div class="fs-next">다음 단계 ${next.name}까지 ${fmtDur((next.h-h)*3600000)}</div>`:''}`;
   };
   tick();
-  fastTimer=setInterval(tick,1000);
+  if(!paused) fastTimer=setInterval(tick,1000);
+  renderFastHist();
+}
+
+/* 멈춤/이어서 — 멈춘 동안의 시간은 경과에서 빼준다 */
+function fastTogglePause(){
+  if(!fastState) return;
+  if(fastState.pausedAt){
+    fastState.paused=(fastState.paused||0)+(Date.now()-fastState.pausedAt);
+    fastState.pausedAt=null;
+    toast('이어서 진행');
+  } else {
+    fastState.pausedAt=Date.now();
+    toast('멈춤');
+  }
+  jSet('wl-fast',fastState); renderFastCard(); ghAutoBackupSoon();
+}
+/* 진행 중에 목표 시간만 바꾸기 (경과 시간은 유지) */
+function fastEditGoal(){
+  const ov=document.createElement('div'); ov.className='ov';
+  ov.innerHTML=`<div class="dlg">
+    <div class="dlg-t">목표 시간 변경</div>
+    <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+      지금까지 흐른 시간은 그대로 두고 목표만 바꿉니다.</div>
+    <div class="fast-goals">${FAST_GOALS.map(g=>
+      `<button data-g="${g}"${g===fastState.goalH?' class="on"':''}>${g}시간</button>`).join('')}</div>
+    <div class="dlg-btns"><button class="dlg-b" data-r="n" style="width:100%">취소</button></div>
+  </div>`;
+  ov.querySelectorAll('.fast-goals button').forEach(b=>b.onclick=()=>{
+    fastState.goalH=+b.dataset.g; jSet('wl-fast',fastState);
+    ov.remove(); renderFastCard(); ghAutoBackupSoon(); toast(`목표 ${b.dataset.g}시간`);
+  });
+  ov.addEventListener('click',e=>{
+    const r=e.target.dataset&&e.target.dataset.r;
+    if(r==='n'||e.target===ov) ov.remove();
+  });
+  showOverlay(ov);
+}
+
+/* 공복 기록이 쌓이는 곳 */
+function renderFastHist(){
+  const el=document.getElementById('fastHist');
+  if(!el) return;
+  if(!fastHist.length){ el.innerHTML=''; return; }
+  const best=Math.max(...fastHist.map(f=>f.hours));
+  const done=fastHist.filter(f=>f.hours>=f.goalH).length;
+  const avg=fastHist.reduce((s,f)=>s+f.hours,0)/fastHist.length;
+  el.innerHTML=`
+    <div class="sec-t">공복 기록</div>
+    <div class="card">
+      <div class="ms-grid" style="margin-bottom:12px">
+        <div><b>${fastHist.length}</b><span>총 횟수</span></div>
+        <div><b>${best.toFixed(1)}</b><span>최장 시간</span></div>
+        <div><b>${avg.toFixed(1)}</b><span>평균 시간</span></div>
+      </div>
+      <div class="fh-list">
+        ${fastHist.slice(0,10).map(f=>{
+          const ok=f.hours>=f.goalH;
+          const pct=Math.min(100, Math.round(f.hours/f.goalH*100));
+          const st=new Date(f.start), en=new Date(f.end);
+          return `<div class="fh-row">
+            <div class="fh-d">${shortD(f.d)}</div>
+            <div class="fh-mid">
+              <div class="fh-bar"><div class="fh-fill${ok?' ok':''}" style="width:${pct}%"></div></div>
+              <div class="fh-t">${p2(st.getHours())}:${p2(st.getMinutes())} → ${p2(en.getHours())}:${p2(en.getMinutes())}</div>
+            </div>
+            <div class="fh-h${ok?' ok':''}">${f.hours.toFixed(1)}h<span>/${f.goalH}</span></div>
+          </div>`;
+        }).join('')}
+      </div>
+      ${fastHist.length>10?`<div class="fh-more">최근 10개만 표시 · 전체 ${fastHist.length}개</div>`:''}
+    </div>`;
 }
 
 /* ================= 칼로리 계산기 =================
@@ -1954,16 +2151,41 @@ function renderFastCard(){
    지방=체중×0.7g, 탄수=(총칼로리-단백질·지방칼로리)÷4, 식이섬유=칼로리÷1000×14
    1,300kcal 밑으로는 안 내려가게 하한선. 2주 굴려보고 체중 안 움직이면 재조정하라는
    전제가 붙어 있어서, 계산기에도 그대로 남겨둠. */
-function calcMacros(weight, heavy){
-  const mult = heavy ? 25 : 23;
-  let kcal = Math.round(weight*mult);
-  const floored = kcal < 1300;
-  if(floored) kcal = 1300;
-  const protein = Math.round(weight*2.2);
-  const fat = Math.round(weight*0.7);
-  const carbs = Math.max(0, Math.round((kcal - protein*4 - fat*9)/4));
-  const fiber = Math.round(kcal/1000*14);
-  return {weight, heavy, mult, kcal, protein, fat, carbs, fiber, floored};
+/* Mifflin-St Jeor (1990) — 현재 가장 널리 쓰이는 기초대사량 공식.
+   BMR = 10×체중 + 6.25×키 − 5×나이 (+5 남 / −161 여)
+   TDEE = BMR × 활동계수, 목표 = TDEE − 감량폭.
+   단백질·지방은 현재 체중이 아니라 목표 체중 기준으로 잡는다.
+   체지방이 많을수록 현재 체중 기준은 과다하게 나오기 때문. */
+const ACT=[
+  {k:1.2,   label:'거의 앉아서', desc:'사무직·운동 거의 안 함'},
+  {k:1.375, label:'가벼움',      desc:'주 1~3회 가벼운 운동'},
+  {k:1.55,  label:'보통',        desc:'주 3~5회 중간 강도'},
+  {k:1.725, label:'활발',        desc:'주 6~7회 강도 높은 운동'},
+];
+const DEFICIT=[
+  {v:300, label:'천천히', desc:'주 약 0.3kg'},
+  {v:500, label:'표준',   desc:'주 약 0.5kg'},
+  {v:750, label:'빠르게', desc:'주 약 0.75kg'},
+];
+function calcMacros(o){
+  // 옛 호출 방식(체중 하나만) 호환
+  if(typeof o==='number') o={weight:o, sex:'m', age:40, height:175, activity:1.375, deficit:500, goalWeight:o};
+  const {weight, height, age, sex, activity, deficit} = o;
+  const goalWeight = o.goalWeight || weight;
+  const bmr = Math.round(10*weight + 6.25*height - 5*age + (sex==='f' ? -161 : 5));
+  const tdee = Math.round(bmr*activity);
+  let kcal = tdee - deficit;
+  // 기초대사량 아래로는 내려가지 않게, 그리고 절대 하한 1300
+  let floored=false;
+  if(kcal < bmr){ kcal = bmr; floored=true; }
+  if(kcal < 1300){ kcal = 1300; floored=true; }
+  kcal = Math.round(kcal);
+  const protein = Math.round(goalWeight*1.8);
+  const fat     = Math.round(goalWeight*0.8);
+  const carbs   = Math.max(0, Math.round((kcal - protein*4 - fat*9)/4));
+  const fiber   = Math.round(kcal/1000*14);
+  return {weight, height, age, sex, activity, deficit, goalWeight,
+          bmr, tdee, kcal, protein, fat, carbs, fiber, floored};
 }
 /* 하루치 합산. 공복으로 표시한 끼니는 0으로 잡고 합산에서 제외 */
 function dayIntake(dateKey){
@@ -1993,7 +2215,7 @@ function renderMacroCard(){
     const pct=Math.max(0, Math.min(100, Math.round(net/mt.kcal*100)));
     const left=mt.kcal-net;
     el.innerHTML=`<div class="calc-card">
-      <div class="calc-top"><span class="t">오늘의 목표 · ${mt.weight}kg 기준${mt.floored?' · 하한선 적용':''}</span>
+      <div class="calc-top"><span class="t">오늘의 목표 · ${mt.weight}kg${mt.tdee?` · 활동 포함 ${mt.tdee.toLocaleString()}kcal`:''}${mt.floored?' · 하한 적용':''}</span>
         <button class="calc-edit" id="calcOpenBtn">수정</button></div>
       <div class="calc-kcal">${mt.kcal.toLocaleString()}<small>kcal</small></div>
       <div class="calc-grid">
@@ -2019,56 +2241,97 @@ function renderMacroCard(){
   document.getElementById('calcOpenBtn').onclick=calcSheet;
 }
 function calcSheet(){
-  const mt=prof.macroTarget;
-  const w0 = mt? mt.weight : (curW()!=null? curW() : (prof.start||''));
-  const heavy0 = mt? mt.heavy : false;
+  const mt=prof.macroTarget||{};
+  const cur={
+    sex: mt.sex||'m',
+    age: mt.age||'',
+    height: mt.height||'',
+    weight: mt.weight || (curW()!=null? curW() : (prof.start||'')),
+    goalWeight: mt.goalWeight || prof.goal || '',
+    activity: mt.activity||1.375,
+    deficit: mt.deficit!=null? mt.deficit : 500,
+  };
   const ov=document.createElement('div'); ov.className='ov';
-  ov.innerHTML=`<div class="dlg">
+  ov.innerHTML=`<div class="dlg" style="max-width:350px;max-height:88vh;overflow-y:auto">
     <div class="dlg-t">칼로리 계산기</div>
-    <div class="fld" style="margin-bottom:12px"><label>체중 kg</label>
-      <input id="cW" type="number" inputmode="decimal" step="0.1" value="${w0}" placeholder="0.0"></div>
-    <label class="f" style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">웨이트 트레이닝 빈도</label>
-    <div class="segs" style="display:flex;gap:8px;margin-bottom:14px">
-      <button class="seg" id="cHeavyNo" style="flex:1;padding:11px 4px;border-radius:11px;font-size:13px;font-weight:700;background:var(--raise);border:1.5px solid transparent;color:var(--muted)">주 4회 미만</button>
-      <button class="seg" id="cHeavyYes" style="flex:1;padding:11px 4px;border-radius:11px;font-size:13px;font-weight:700;background:var(--raise);border:1.5px solid transparent;color:var(--muted)">주 4회 이상</button>
+    <div class="cal-note">Mifflin-St Jeor 공식 기준입니다. 키·나이·성별이 들어가야
+      기초대사량이 제대로 나옵니다.</div>
+    <div class="lv-seg" id="cSex" style="margin-bottom:12px">
+      <button data-s="m">남성</button><button data-s="f">여성</button></div>
+    <div class="row" style="display:flex;gap:8px;margin-bottom:10px">
+      <div class="fld"><label>나이</label>
+        <input id="cAge" type="number" inputmode="numeric" value="${cur.age}" placeholder="40"></div>
+      <div class="fld"><label>키 cm</label>
+        <input id="cH" type="number" inputmode="decimal" value="${cur.height}" placeholder="175"></div>
+    </div>
+    <div class="row" style="display:flex;gap:8px;margin-bottom:12px">
+      <div class="fld"><label>현재 체중 kg</label>
+        <input id="cW" type="number" inputmode="decimal" step="0.1" value="${cur.weight}" placeholder="0.0"></div>
+      <div class="fld"><label>목표 체중 kg</label>
+        <input id="cGW" type="number" inputmode="decimal" step="0.1" value="${cur.goalWeight}" placeholder="0.0"></div>
+    </div>
+    <label class="cal-lbl">활동량</label>
+    <div class="act-seg" id="cAct">
+      ${ACT.map(a=>`<button data-k="${a.k}"><b>${a.label}</b><span>${a.desc}</span></button>`).join('')}
+    </div>
+    <label class="cal-lbl">감량 속도</label>
+    <div class="lv-seg" id="cDef" style="margin-bottom:14px">
+      ${DEFICIT.map(x=>`<button data-v="${x.v}"><b>${x.label}</b><span>${x.desc}</span></button>`).join('')}
     </div>
     <div id="cResult"></div>
-    <div style="font-size:11px;color:var(--dim);line-height:1.6;margin-top:12px">
-      지방·탄수는 먼저 깎는 자리가 아니라 채우는 자리예요. 이 숫자는 출발점이고,
-      2주 굴려보고 체중이 안 움직이면 그때 다시 조정하는 게 맞습니다.</div>
+    <div class="cal-note" style="margin-top:12px">
+      단백질·지방은 <b>목표 체중</b> 기준으로 잡았습니다(단백질 1.8g/kg, 지방 0.8g/kg).
+      체지방이 많을 때 현재 체중으로 계산하면 현실적으로 먹기 어려운 양이 나옵니다.
+      계산값은 출발점이고, 2주 정도 지켜본 뒤 체중이 안 움직이면 조정하세요.</div>
     <div class="dlg-btns"><button class="dlg-b" data-r="n">닫기</button>
       <button class="dlg-b p" data-r="y">저장</button></div>
   </div>`;
-  let heavy=heavy0;
+  let sex=cur.sex, act=cur.activity, def=cur.deficit;
+  const read=()=>({
+    sex, activity:act, deficit:def,
+    age:parseInt(ov.querySelector('#cAge').value,10)||0,
+    height:parseFloat(ov.querySelector('#cH').value)||0,
+    weight:parseFloat(ov.querySelector('#cW').value)||0,
+    goalWeight:parseFloat(ov.querySelector('#cGW').value)||0,
+  });
   const paint=()=>{
-    document.getElementById('cHeavyNo').style.cssText+=';background:'+(!heavy?'var(--acc-bg)':'var(--raise)')+';color:'+(!heavy?'var(--acc)':'var(--muted)')+';border-color:'+(!heavy?'var(--acc)':'transparent');
-    document.getElementById('cHeavyYes').style.cssText+=';background:'+(heavy?'var(--acc-bg)':'var(--raise)')+';color:'+(heavy?'var(--acc)':'var(--muted)')+';border-color:'+(heavy?'var(--acc)':'transparent');
-    const w=parseFloat(ov.querySelector('#cW').value);
-    const r=document.getElementById('cResult');
-    if(!w){ r.innerHTML=''; return; }
-    const m=calcMacros(w,heavy);
+    ov.querySelectorAll('#cSex button').forEach(b=>b.classList.toggle('on',b.dataset.s===sex));
+    ov.querySelectorAll('#cAct button').forEach(b=>b.classList.toggle('on',+b.dataset.k===act));
+    ov.querySelectorAll('#cDef button').forEach(b=>b.classList.toggle('on',+b.dataset.v===def));
+    const v=read(); const r=ov.querySelector('#cResult');
+    if(!v.age||!v.height||!v.weight){
+      r.innerHTML='<div class="cal-need">나이·키·현재 체중을 넣으면 계산됩니다.</div>'; return;
+    }
+    const m=calcMacros({...v, goalWeight:v.goalWeight||v.weight});
     r.innerHTML=`<div class="calc-card" style="margin-bottom:0">
-      <div class="calc-top"><span class="t">${w}kg × ${m.mult}${m.floored?' → 1,300 하한선 적용':''}</span></div>
-      <div class="calc-kcal">${m.kcal.toLocaleString()}<small>kcal</small></div>
+      <div class="calc-top"><span class="t">기초대사량 ${m.bmr.toLocaleString()} · 활동 포함 ${m.tdee.toLocaleString()}</span></div>
+      <div class="calc-kcal">${m.kcal.toLocaleString()}<small>kcal 목표</small></div>
       <div class="calc-grid">
         <div><b>${m.protein}g</b><span>단백질</span></div>
         <div><b>${m.fat}g</b><span>지방</span></div>
         <div><b>${m.carbs}g</b><span>탄수</span></div>
         <div><b>${m.fiber}g</b><span>식이섬유</span></div>
-      </div></div>`;
+      </div>
+      ${m.floored?'<div class="calc-warn">기초대사량 아래로는 내려가지 않게 조정했습니다.</div>':''}
+    </div>`;
   };
+  ov.querySelector('#cSex').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(b){ sex=b.dataset.s; paint(); }});
+  ov.querySelector('#cAct').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(b){ act=+b.dataset.k; paint(); }});
+  ov.querySelector('#cDef').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(b){ def=+b.dataset.v; paint(); }});
+  ['#cAge','#cH','#cW','#cGW'].forEach(id=>ov.querySelector(id).addEventListener('input',paint));
   ov.addEventListener('click',e=>{
-    if(e.target.id==='cHeavyNo'){ heavy=false; paint(); return; }
-    if(e.target.id==='cHeavyYes'){ heavy=true; paint(); return; }
     const r=e.target.dataset&&e.target.dataset.r;
     if(r==='y'){
-      const w=parseFloat(ov.querySelector('#cW').value);
-      if(!w){ toast('체중을 입력하세요'); return; }
-      prof.macroTarget=calcMacros(w,heavy);
-      jSet(K_PROF,prof); ov.remove(); toast('목표 저장됨'); renderMacroCard(); ghAutoBackupSoon();
+      const v=read();
+      if(!v.age||!v.height||!v.weight){ toast('나이·키·체중을 입력하세요'); return; }
+      prof.macroTarget=calcMacros({...v, goalWeight:v.goalWeight||v.weight});
+      jSet(K_PROF,prof); ov.remove(); toast('목표 저장됨');
+      renderMacroCard(); ghAutoBackupSoon();
     } else if(r==='n'||e.target===ov) ov.remove();
   });
-  ov.querySelector('#cW').addEventListener('input',paint);
   showOverlay(ov);
   paint();
 }
