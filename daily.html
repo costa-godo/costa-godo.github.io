@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>일일 업무 체크리스트</title>
+<style>
+  :root{
+    --bg:#0e1316; --surface:#171f24; --raise:#1e282e; --border:#2b363d;
+    --text:#e9eef1; --muted:#8b98a2; --dim:#5d6a73;
+    --acc:#3ad17e; --acc-glow:rgba(58,209,126,.45);
+    --imp1:#f2b13c; --imp2:#ff5d5d;
+    --fs:16px;
+    --font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font); font-size:var(--fs); line-height:1.4; letter-spacing:-.01em; padding-bottom:env(safe-area-inset-bottom); transition:background .25s,color .25s;}
+  button{font-family:var(--font);}
+
+  header{position:sticky; top:0; z-index:30; background:var(--surface); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); padding:calc(9px + env(safe-area-inset-top)) 14px 9px;}
+  .h-top{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .h-left{min-width:0;}
+  .h-title{font-size:16px; font-weight:700;}
+  .h-date{font-family:var(--mono); font-size:11.5px; color:var(--muted); margin-top:1px;}
+  .h-day{color:var(--acc); font-weight:700;}
+  .h-btns{display:flex; gap:7px; flex:none;}
+  .icon-btn{width:38px; height:38px; border-radius:10px; background:var(--raise); border:1px solid var(--border); color:var(--text); font-size:17px; display:flex; align-items:center; justify-content:center;}
+  .icon-btn.on{background:var(--acc); border-color:var(--acc); color:#0e1316;}
+  .bar-wrap{margin-top:9px; display:flex; align-items:center; gap:10px;}
+  .bar{flex:1; height:8px; background:rgba(0,0,0,.25); border-radius:6px; overflow:hidden; border:1px solid var(--border);}
+  .bar-fill{height:100%; width:0; background:var(--acc); border-radius:6px; transition:width .35s; box-shadow:0 0 8px var(--acc-glow);}
+  .bar-pct{font-family:var(--mono); font-size:12.5px; font-weight:700; min-width:50px; text-align:right;}
+  .h-next{margin-top:7px; font-size:12px; color:var(--muted);}
+  .h-next b{color:var(--imp1); font-family:var(--mono);}
+  .filters{margin-top:8px; display:flex; gap:6px;}
+  .shift-tabs{margin-top:8px; display:flex; gap:6px;}
+  .stab{flex:1; min-width:0; padding:9px 1px; border-radius:11px; text-align:center; font-size:12.5px; font-weight:800; color:var(--muted); background:var(--raise); border:1.5px solid var(--border); position:relative; cursor:pointer; letter-spacing:-.03em;}
+  .stab.sel{background:var(--acc); color:#fff; border-color:var(--acc);}
+  .stab.today{border:2px solid #22C55E; box-shadow:0 0 0 2px rgba(34,197,94,.22);}
+  .stab .today-dot{position:absolute; top:-8px; right:-3px; font-size:9px; background:#22C55E; color:#fff; padding:1.5px 6px; border-radius:8px; font-weight:800;}
+  .rest-card{margin:22px 14px; padding:30px 16px; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:14px; color:var(--muted); font-size:14.5px; line-height:1.8;}
+  .rest-card b{color:var(--text); font-size:16px;}
+  .dawn-divider{margin:18px 14px 4px; display:flex; align-items:center; gap:9px; font-size:11.5px; font-weight:700; letter-spacing:.1em; color:#22C55E;}
+  .dawn-divider::after{content:""; flex:1; height:1px; background:var(--border);}
+  .chip{font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:20px; background:var(--raise); border:1px solid var(--border); color:var(--muted);}
+  .chip.on{background:var(--acc); border-color:var(--acc); color:#0e1316;}
+
+  .phase{margin:16px 14px 4px; display:flex; align-items:center; gap:9px; font-size:11.5px; font-weight:700; letter-spacing:.1em; color:var(--dim); text-transform:uppercase;}
+  .phase::after{content:""; flex:1; height:1px; background:var(--border);}
+  .phase.duty{color:var(--imp1);}
+
+  .list{padding:0 10px;}
+  .block{display:flex; gap:10px; padding:3px 0;}
+  .rail{width:20px; display:flex; flex-direction:column; align-items:center; padding-top:15px;}
+  .led{width:15px; height:15px; border-radius:50%; flex:none; background:rgba(0,0,0,.3); border:2px solid var(--dim); transition:all .3s;}
+  .led.partial{border-color:var(--imp1); box-shadow:0 0 6px rgba(242,177,60,.4);}
+  .led.done{background:var(--acc); border-color:var(--acc); box-shadow:0 0 10px var(--acc-glow);}
+  .rail-line{flex:1; width:2px; background:var(--border); margin-top:5px; min-height:8px;}
+  .block:last-child .rail-line{display:none;}
+
+  .card{flex:1; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:11px 12px 5px; margin-bottom:8px;}
+  .card.now{border-color:var(--acc); box-shadow:0 0 0 1px var(--acc-glow);}
+  .c-head{display:flex; align-items:center; gap:8px; margin-bottom:7px;}
+  .c-time{font-family:var(--mono); font-size:16px; font-weight:700;}
+  .c-name{font-size:12px; color:var(--muted); font-weight:600;}
+  .c-alarm{font-size:12px; color:var(--imp1);}
+  .now-tag{font-size:10px; font-weight:700; color:var(--acc); background:var(--acc-glow); padding:2px 7px; border-radius:20px; margin-left:auto;}
+  .collapse-btn{margin-left:auto; color:var(--dim); font-size:13px; padding:2px 6px;}
+
+  .item{display:flex; align-items:flex-start; gap:10px; padding:9px 2px; border-top:1px solid var(--border);}
+  .item:first-of-type{border-top:none;}
+  .item .tap{display:flex; gap:10px; flex:1; min-width:0; cursor:pointer;}
+  .chk{width:24px; height:24px; border-radius:7px; border:2px solid #3a4750; flex:none; margin-top:1px; display:flex; align-items:center; justify-content:center; transition:all .18s; background:rgba(0,0,0,.2);}
+  .chk svg{width:14px; height:14px; opacity:0; transform:scale(.5); transition:all .18s;}
+  .item.done .chk{background:var(--acc); border-color:var(--acc);}
+  .item.done .chk svg{opacity:1; transform:scale(1);}
+  .i-body{flex:1; min-width:0;}
+  .i-text{font-size:15px; line-height:1.55; white-space:pre-line; word-break:keep-all; overflow-wrap:anywhere;}
+  .item.done .i-text{color:var(--dim); text-decoration:line-through;}
+  .i-meta{display:flex; align-items:center; gap:5px; margin-top:4px; flex-wrap:wrap;}
+  .cat{font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:5px;}
+  .day-badge{font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:5px; color:var(--imp1); background:rgba(242,177,60,.13); font-family:var(--mono);}
+  .imp{font-size:10.5px; font-weight:800; padding:1px 6px; border-radius:5px;}
+  .imp1{color:var(--imp1); background:rgba(242,177,60,.14);}
+  .imp2{color:#fff; background:var(--imp2);}
+  .memo-btn{font-size:11px; color:var(--dim); padding:2px 6px; border-radius:6px;}
+  .memo-btn.has{color:var(--imp1);}
+  .item.na{opacity:.4;}
+  .na-tag{font-size:10.5px; color:var(--dim); font-weight:600;}
+  .item.imp2-row .i-text{font-weight:600;}
+  .item.imp2-row{border-left:3px solid var(--imp2); margin-left:-2px; padding-left:8px;}
+
+  .memo-box{padding:0 2px 8px 34px;}
+  .memo-box textarea{width:100%; background:rgba(0,0,0,.2); border:1px solid var(--border); border-radius:9px; color:var(--text); font-family:var(--font); font-size:14px; padding:8px 10px; resize:none;}
+  .memo-box textarea:focus{outline:none; border-color:var(--acc);}
+  .hidden{display:none;}
+
+  .steps{margin:2px 2px 8px 34px; background:rgba(0,0,0,.18); border:1px solid var(--border); border-radius:11px; overflow:hidden;}
+  .steps-head{display:flex; align-items:center; gap:8px; padding:9px 11px; font-size:12.5px; font-weight:700; color:var(--imp2);}
+  .steps-head .cnt{margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--muted);}
+  .step{display:flex; align-items:center; gap:10px; padding:8px 11px; border-top:1px solid var(--border);}
+  .step-num{font-family:var(--mono); font-size:12px; color:var(--dim); width:15px; flex:none;}
+  .step-chk{width:20px; height:20px; border-radius:6px; border:2px solid #3a4750; flex:none; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.2);}
+  .step-chk svg{width:12px; height:12px; opacity:0;}
+  .step.done .step-chk{background:var(--acc); border-color:var(--acc);}
+  .step.done .step-chk svg{opacity:1;}
+  .step-text{font-size:14px;}
+  .step.done .step-text{color:var(--dim); text-decoration:line-through;}
+  .chev{transition:transform .2s; color:var(--dim);}
+  .chev.open{transform:rotate(90deg);}
+
+  body.edit .card{border-style:dashed;}
+  .edit-ctrls{display:none; gap:5px; align-items:center; margin-left:auto;}
+  body.edit .edit-ctrls{display:flex;}
+  body.edit .tap{pointer-events:none;}
+  body.edit .memo-box,body.edit .steps{display:none;}
+  .mini{width:30px; height:30px; border-radius:8px; background:var(--raise); border:1px solid var(--border); color:var(--text); font-size:14px; display:flex; align-items:center; justify-content:center;}
+  .mini.del{color:var(--imp2);}
+  .block-edit{display:none; gap:6px; margin:2px 0 8px; flex-wrap:wrap;}
+  body.edit .block-edit{display:flex;}
+  .be-btn{font-size:12px; font-weight:600; padding:7px 11px; border-radius:9px; background:var(--raise); border:1px solid var(--border); color:var(--text);}
+  .be-btn.del{color:var(--imp2);}
+  .add-block{display:none; width:calc(100% - 20px); margin:6px 10px 4px 30px; padding:12px; border-radius:12px; background:transparent; border:1.5px dashed var(--border); color:var(--acc); font-size:14px; font-weight:700;}
+  body.edit .add-block{display:block;}
+
+  footer{padding:16px 14px calc(30px + env(safe-area-inset-bottom)); text-align:center;}
+  .reset{background:var(--raise); color:var(--muted); border:1px solid var(--border); border-radius:10px; padding:11px 20px; font-size:13.5px; font-weight:600;}
+  .foot-note{margin-top:12px; font-size:11.5px; color:var(--dim); line-height:1.6;}
+
+  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:100; opacity:0; pointer-events:none; transition:opacity .2s;}
+  .overlay.show{opacity:1; pointer-events:auto;}
+  .sheet{position:fixed; left:0; right:0; bottom:0; z-index:101; background:var(--surface); border-top:1px solid var(--border); border-radius:20px 20px 0 0; padding:8px 18px calc(24px + env(safe-area-inset-bottom)); transform:translateY(100%); transition:transform .28s cubic-bezier(.2,.9,.3,1); max-height:88vh; overflow-y:auto;}
+  .sheet.show{transform:translateY(0);}
+  .grab{width:38px; height:4px; background:var(--dim); border-radius:3px; margin:6px auto 14px;}
+  .sheet h2{font-size:17px; margin:0 0 14px;}
+  .sec{margin-bottom:20px;}
+  .sec-t{font-size:12px; font-weight:700; color:var(--muted); letter-spacing:.05em; margin-bottom:9px; text-transform:uppercase;}
+  .row-set{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 0; border-bottom:1px solid var(--border);}
+  .row-set:last-child{border:none;}
+  .swatches{display:flex; gap:9px; flex-wrap:wrap;}
+  .sw{width:40px; height:40px; border-radius:11px; border:2px solid transparent; position:relative;}
+  .sw.sel{border-color:var(--text);}
+  .sw.sel::after{content:"\2713"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; text-shadow:0 1px 2px rgba(0,0,0,.4);}
+  .base-opts{display:flex; gap:8px;}
+  .base-opt{flex:1; padding:11px; border-radius:11px; border:1px solid var(--border); background:var(--raise); text-align:center; font-size:13px; font-weight:600;}
+  .base-opt.sel{border-color:var(--acc); color:var(--acc);}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:6px; font-weight:600;}
+  .field input,.field textarea{width:100%; background:var(--raise); border:1px solid var(--border); border-radius:11px; color:var(--text); font-family:var(--font); font-size:16px; padding:12px;}
+  .field input:focus,.field textarea:focus{outline:none; border-color:var(--acc);}
+  .imp-opts,.cat-opts,.day-opts{display:flex; gap:7px; flex-wrap:wrap;}
+  .opt{padding:9px 14px; border-radius:10px; border:1px solid var(--border); background:var(--raise); font-size:13.5px; font-weight:600;}
+  .opt.sel{border-color:var(--acc); background:var(--acc-glow); color:var(--acc);}
+  .day-opts .opt{padding:9px 0; width:42px; text-align:center;}
+  .toggle{width:50px; height:30px; border-radius:16px; background:var(--border); position:relative; transition:.2s; flex:none;}
+  .toggle.on{background:var(--acc);}
+  .toggle::after{content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; transition:.2s;}
+  .toggle.on::after{left:23px;}
+  .big-btn{width:100%; padding:14px; border-radius:12px; background:var(--acc); color:#0e1316; font-size:15px; font-weight:700; border:none; margin-top:6px;}
+  .big-btn.ghost{background:var(--raise); color:var(--text); border:1px solid var(--border);}
+  .big-btn.danger{background:transparent; color:var(--imp2); border:1px solid var(--imp2);}
+  .btn-row{display:flex; gap:9px;}
+  .btn-row .big-btn{flex:1;}
+  .toast{position:fixed; left:14px; right:14px; top:calc(12px + env(safe-area-inset-top)); z-index:200; background:var(--acc); color:#0e1316; padding:14px 16px; border-radius:13px; font-weight:700; font-size:14.5px; box-shadow:0 8px 24px rgba(0,0,0,.4); transform:translateY(-140%); transition:transform .3s; display:flex; align-items:center; gap:10px;}
+  .toast.show{transform:translateY(0);}
+  .set-desc{font-size:11.5px; color:var(--dim); line-height:1.5; margin-top:4px;}
+  body.edit .c-head, body.edit .item{-webkit-user-select:none; user-select:none; -webkit-touch-callout:none;}
+
+  /* ===== 항목 사진 ===== */
+  .ph-btn{font-size:12px; color:var(--muted); background:var(--raise); padding:3px 9px; border-radius:12px; cursor:pointer; font-weight:700;}
+  .ph-btn.has{color:var(--acc);}
+  .photo-panel{margin-top:9px; background:var(--raise); border:1px solid var(--border); border-radius:12px; padding:9px;}
+  .ph-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:7px;}
+  .ph-thumb{position:relative; aspect-ratio:1; border-radius:9px; overflow:hidden; background:var(--surface); border:1px solid var(--border); cursor:pointer;}
+  .ph-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .ph-thumb .cloud{position:absolute; top:4px; right:4px; font-size:9px; background:rgba(0,0,0,.55); color:#8fe3b5; padding:1px 5px; border-radius:7px;}
+  .ph-add{aspect-ratio:1; border-radius:9px; border:1.6px dashed var(--border); background:none; color:var(--muted); font-size:12px; font-weight:700; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer;}
+  .ph-add .pl{font-size:20px; line-height:1;}
+  .ph-cap{margin-top:7px; font-size:10.5px; color:var(--dim); text-align:right;}
+  /* 라이트박스 */
+  .lb-ov{position:fixed; inset:0; background:rgba(0,0,0,.93); z-index:300; display:flex; flex-direction:column;}
+  .lb-top{display:flex; justify-content:space-between; align-items:center; padding:calc(12px + env(safe-area-inset-top,0px)) 16px 10px; color:#fff;}
+  .lb-cnt{font-size:13.5px; font-weight:700; font-family:var(--mono, monospace);}
+  .lb-acts{display:flex; gap:14px;}
+  .lb-acts button{background:none; border:none; color:#fff; font-size:19px; cursor:pointer;}
+  .lb-body{flex:1; display:flex; align-items:center; justify-content:center; position:relative; min-height:0;}
+  .lb-body img{max-width:100%; max-height:100%; object-fit:contain;}
+  .lb-nav{position:absolute; top:0; bottom:0; width:34%; display:flex; align-items:center; color:rgba(255,255,255,.65); font-size:26px; cursor:pointer; user-select:none;}
+  .lb-nav.prev{left:0; justify-content:flex-start; padding-left:14px;}
+  .lb-nav.next{right:0; justify-content:flex-end; padding-right:14px;}
+  /* 백업 섹션 */
+  .ghsync{margin:14px 14px 0;}
+  .gh-head{font-size:13.5px; font-weight:800; margin-bottom:8px; display:flex; align-items:baseline; gap:8px;}
+  .gh-hint{font-size:10.5px; font-weight:600; color:var(--dim);}
+  .gh-btns{display:flex; gap:7px;}
+  .gh-btn{flex:1; padding:11px 6px; border-radius:11px; border:1.5px solid var(--border); background:var(--surface); color:var(--muted); font-size:12.5px; font-weight:700; cursor:pointer;}
+  .gh-btn.primary{background:var(--acc); border-color:var(--acc); color:#0e1316; font-weight:800;}
+  .gh-status{margin-top:7px; font-size:11px; color:var(--dim); line-height:1.55;}
+
+
+  .shift-opts{display:flex; flex-wrap:wrap; gap:6px;}
+  .sopt{padding:9px 13px; border-radius:11px; border:1.5px solid var(--border); background:var(--raise); color:var(--muted); font-size:13px; font-weight:700; cursor:pointer;}
+  .sopt.sel{background:var(--acc); border-color:var(--acc); color:#0e1316;}
+  /* ===== 업무 메모장 ===== */
+  .workmemo{margin:18px 14px 6px;}
+  .wm-head{font-size:13.5px; font-weight:800; color:var(--text); margin-bottom:8px; display:flex; align-items:baseline; gap:8px;}
+  .wm-hint{font-size:10.5px; font-weight:600; color:var(--dim);}
+  #workMemo{
+    width:100%; min-height:120px; resize:vertical;
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:13px; color:var(--text); font-size:14.5px; line-height:1.6; font-family:var(--sans, inherit);
+  }
+  #workMemo:focus{outline:none; border-color:var(--acc);}
+</style>
+</head>
+<body>
+<header>
+  <div class="h-top">
+    <div class="h-left">
+      <div class="h-title">일일 업무 체크리스트</div>
+      <div class="h-date"><span id="dateStr"></span> <span class="h-day" id="dayStr"></span></div>
+    </div>
+    <div class="h-btns">
+      <button class="icon-btn" id="setBtn">⚙</button>
+      <button class="icon-btn" id="editBtn">✏️</button>
+    </div>
+  </div>
+  <div class="bar-wrap"><div class="bar"><div class="bar-fill" id="barFill"></div></div><div class="bar-pct" id="barPct">0/0</div></div>
+  <div class="h-next" id="nextTask"></div>
+  <div class="filters">
+    <button class="chip" id="fltIncomplete">미완료만</button>
+    <button class="chip" id="fltImportant">필수만</button>
+  </div>
+  <div class="shift-tabs" id="shiftTabs"></div>
+</header>
+
+<div class="list" id="list"></div>
+
+<div class="workmemo">
+  <div class="wm-head">📌 빠른 인수인계 메모 <span class="wm-hint">자동 저장 · 날짜가 바뀌어도 유지</span></div>
+  <textarea id="workMemo" placeholder="인수인계, 특이사항, 잊지 말 것 등을 자유롭게 적어두세요"></textarea>
+</div>
+
+<div class="ghsync">
+  <div class="gh-head">☁️ 깃허브 자동 백업 <span class="gh-hint">체크리스트 · 메모 · 사진 전체</span></div>
+  <div class="gh-btns">
+    <button class="gh-btn primary" onclick="ghBackup(true)">지금 백업</button>
+    <button class="gh-btn" onclick="ghPull(true)">불러오기</button>
+    <button class="gh-btn" onclick="ghConfigSheet()">⚙ 연결설정</button>
+  </div>
+  <div class="gh-status" id="ghStatus"></div>
+</div>
+
+<input type="file" id="photoInput" accept="image/*" multiple style="display:none">
+
+<footer>
+  <button class="reset" id="resetBtn">오늘 체크 초기화</button>
+  <div class="foot-note">
+    편집(✏️)으로 항목·시간·색상·순서·중요도·알람을 직접 바꿀 수 있습니다.<br>
+    날짜가 바뀌면 체크는 자동으로 새로 시작됩니다.
+  </div>
+</footer>
+
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="sheet"><div class="grab"></div><div id="sheetBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DAYS=['일','월','화','수','목','금','토'];
+const CATS=['기동','중지','검침','기록','방송','전송','순찰','인계','점검','확인','조작','조건','기타'];
+const CATCOLOR={기동:['#7ee0a6','rgba(58,209,126,.11)'],중지:['#ff9b83','rgba(255,122,92,.12)'],검침:['#f4c56b','rgba(242,177,60,.11)'],기록:['#f4c56b','rgba(242,177,60,.11)'],방송:['#8cc4f0','rgba(90,166,230,.12)'],전송:['#8cc4f0','rgba(90,166,230,.12)'],순찰:['#c6a9f5','rgba(177,140,240,.12)'],인계:['#c6a9f5','rgba(177,140,240,.12)'],점검:['#7ee0a6','rgba(58,209,126,.11)'],확인:['#9fb0bb','rgba(139,152,162,.12)'],조작:['#9fb0bb','rgba(139,152,162,.12)'],조건:['#9fb0bb','rgba(139,152,162,.12)'],기타:['#9fb0bb','rgba(139,152,162,.12)']};
+const CHECK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="#0e1316" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>';
+
+const BASES={
+  dark:{bg:'#0e1316',surface:'#171f24',raise:'#1e282e',border:'#2b363d',text:'#e9eef1',muted:'#8b98a2',dim:'#5d6a73'},
+  midnight:{bg:'#0a0f1e',surface:'#131a30',raise:'#1a2340',border:'#28304f',text:'#e7ebf5',muted:'#8a93b0',dim:'#565f80'},
+  light:{bg:'#eef1f4',surface:'#ffffff',raise:'#f4f6f8',border:'#d7dde3',text:'#18202a',muted:'#5c6b76',dim:'#9aa7b0'},
+};
+const ACCENTS={초록:'#3ad17e',파랑:'#4aa8ff',주황:'#f2952c',보라:'#a274f0',청록:'#2fd4c4',빨강:'#ff5d5d'};
+
+function uid(){return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+
+// 홈화면 추가(standalone) 모드에서는 window.confirm이 무시되므로 자체 다이얼로그 사용
+function appConfirm(msg,onYes){
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;';
+  ov.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:320px;width:100%;padding:20px 18px;">
+    <div style="font-size:15px;line-height:1.6;color:var(--text);white-space:pre-line;">${msg}</div>
+    <div style="display:flex;gap:8px;margin-top:18px;">
+      <button data-r="n" style="flex:1;padding:12px;border-radius:11px;border:1px solid var(--border);background:var(--raise);color:var(--muted);font-size:14px;font-weight:700;">취소</button>
+      <button data-r="y" style="flex:1;padding:12px;border-radius:11px;border:none;background:var(--acc);color:#0e1316;font-size:14px;font-weight:800;">확인</button>
+    </div></div>`;
+  ov.addEventListener('click',e=>{
+    const r=e.target.dataset&&e.target.dataset.r;
+    if(r==='y'){document.body.removeChild(ov); onYes();}
+    else if(r==='n'||e.target===ov){document.body.removeChild(ov);}
+  });
+  document.body.appendChild(ov);
+}
+const SCHEMA_KEY='facility_schema_v2';
+const STATE_KEY='facility_state_v2';
+const DEFAULT={"version": 2, "settings": {"base": "midnight", "accent": "초록", "fs": 20}, "blocks": [{"id": "imruc82lgubw", "time": "03:50", "name": "DVM 냉열원", "phase": "당직", "alarm": false, "items": [{"id": "imruc82lhy95", "cat": "기타", "text": "A동 DVM냉열원 냉각수 순환용 펌프\n03:50분 기동 (B동은 항상 틀어져있어야 함)", "imp": 0}]}, {"id": "b0530", "time": "05:30", "name": "보일러 기동", "phase": "주간", "alarm": false, "items": [{"id": "i0530a", "cat": "기동", "text": "보일러 기동", "imp": 2}]}, {"id": "b0545", "time": "05:45", "name": "", "phase": "주간", "alarm": false, "items": [{"id": "i0545a", "cat": "기동", "text": "흡수식 냉동기 기동\n1. 최소외기 댐퍼 0퍼 설정\n2. 냉방 급기온도 하한설정 2도씩 올리기\n    저 18>20 고 16> 18\n밸브 50퍼 밑으로 내려가면 정상화", "imp": 2, "days": [2, 3, 4, 5]}, {"id": "imsim5v0v0jf", "cat": "기타", "text": "월- 터보냉동기 가동\n외기 0퍼\n말단차압 냉수 공급 정상화되면 공조기 고층부에서 저층부 2개씩 틀기", "imp": 0, "days": [1]}, {"id": "imsim7o5jmq1", "cat": "기타", "text": "주말에는 가동안함", "imp": 0}]}, {"id": "b0615", "time": "06:15", "name": "공조 계통 기동", "phase": "주간", "alarm": false, "items": [{"id": "i0615a", "cat": "기동", "text": "흡수식 냉동기 작동 15분 후 💨\n냉수공급 온도 10-13도까지 떨어지고\n재생기 출구 온도 100도 넘으면 ㅇㅋ\n\n공조기 A.H.U 기동 — 0%로 맞추고 차례로 켜기 (4층 식당·8층 먼저)\n\n외기 0%는 아침기동시 / 체감온도 30도 /습도 90고 이상 일때만 설정 \n\n⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️\n터보식 냉동기⚡️\n외기 0퍼 맞추고 \n터보 돌리고\n온도 6도 낮춰지고 말단차압 올라오면\n공조기 2개씩 돌리기", "imp": 1}, {"id": "i0615b", "cat": "기동", "text": "컨벡터 (안전벨 전원 ON) 확인", "imp": 0}, {"id": "i0615c", "cat": "조건", "text": "주차장 유인팬 기동 하는지 확인 \n(습도 90% 이상 시)", "imp": 0}, {"id": "i0615d", "cat": "확인", "text": "외조기 O.H.U 기동하는지 확인", "imp": 0}]}, {"id": "imruckm20skv", "time": "07:00", "name": "", "phase": "주간", "alarm": false, "items": [{"id": "imruckm20iiz", "cat": "기타", "text": "DVM 전체 기동 (스케줄 설정되어있음)\n8층 확인", "imp": 1}, {"id": "imsollprd3cp", "cat": "기타", "text": "상황일지 싸인\n녹스메일 전송", "imp": 0}]}, {"id": "b0800", "time": "08:00", "time2": "09:00", "name": "", "phase": "주간", "alarm": false, "items": [{"id": "i0800a", "cat": "방송", "text": "아침 방송-주2", "imp": 0}, {"id": "i0800b", "cat": "순찰", "text": "순찰", "imp": 1}]}, {"id": "bfri", "time": "09:00", "name": "금요일 주1 업무", "phase": "주간", "alarm": false, "fri": true, "items": [{"id": "ifri01", "cat": "점검", "text": "정압지 확인 및 교체 (내일 근무자 예정)", "imp": 0}, {"id": "ifri02", "cat": "조작", "text": "세안수 교체 (순찰 돌기 전 물 빼놓기)", "imp": 0}, {"id": "ifri03", "cat": "확인", "text": "청관제 절반 확인", "imp": 0}, {"id": "ifri04", "cat": "조작", "text": "보일러 연도 응축수 물통 비우기", "imp": 0}, {"id": "ifri05", "cat": "조작", "text": "경수연화장치 전환 #1→#2\n(3·4버튼 설정 - 2번 버튼)", "imp": 0}, {"id": "ifri06", "cat": "기타", "text": "중수처리실 오토스크린 청소", "imp": 0}, {"id": "ifri07", "cat": "기타", "text": "B동 1층 화장실 종균제 투입\n(재고없으면 사진찍고 재고 펜으로 기재 · 1개 10L씩 총 2개)", "imp": 0}, {"id": "ifri08", "cat": "확인", "text": "경수연화장치 교번 시약측정 완료 (1→2)", "imp": 0}, {"id": "ifri09", "cat": "조작", "text": "펌프류 절체 (보일러 2개, DVM B동 1개\n기동→정지→다른 펌프 기동)", "imp": 0}, {"id": "ifri10", "cat": "조작", "text": "냉각탑 온도설정 순차변경\n(낮은 온도부터 냉각탑→DVM, 총 5개)", "imp": 0}, {"id": "ifri11", "cat": "기록", "text": "종균제 부적합 등록하고 재고 반영", "imp": 0}]}, {"id": "b1000", "time": "10:00", "name": "", "phase": "주간", "alarm": false, "items": [{"id": "i1000a", "cat": "전송", "text": "폭염대비 문자 전송 + 엑셀 기록 -주2", "imp": 0}]}, {"id": "b1010", "time": "10:10", "name": "오전 검침 -주2", "phase": "주간", "alarm": false, "items": [{"id": "i1010a", "cat": "검침", "text": "보일러 (1·2·3·4) 검침", "imp": 1}, {"id": "i1010b", "cat": "검침", "text": "흡수식 냉동기 검침", "imp": 1}, {"id": "i1010d", "cat": "기록", "text": "상황일지 기록", "imp": 1}, {"id": "i1010c", "cat": "검침", "text": "터보 냉동기 검침", "imp": 1}]}, {"id": "b1200", "time": "12:00", "name": "", "phase": "주간", "alarm": false, "items": [{"id": "i1200a", "cat": "방송", "text": "점심 방송", "imp": 0}]}, {"id": "b1400", "time": "14:00", "name": "", "phase": "주간", "alarm": false, "items": [{"id": "i1400a", "cat": "전송", "text": "체감온도 메시지 전송", "imp": 0}]}, {"id": "imsolpktjf4k", "time": "14:50", "name": "출근 문자 전송", "phase": "주간", "alarm": true, "items": [{"id": "imsolpktj7al", "cat": "기타", "text": "알람 키기\n출근 문자 / DVM 문자 : 예약설정", "imp": 0}]}, {"id": "b1500", "time": "15:00", "name": "당직 교대", "phase": "당직", "alarm": false, "items": [{"id": "i1500a", "cat": "인계", "text": "당직교대 완료\n키수량 및 특이사항 전달 받았습니다", "imp": 2}, {"id": "imrvo7891arb", "cat": "인계", "text": "키 수량 확인", "imp": 2}, {"id": "imrvo87iz7yv", "cat": "인계", "text": "DVM 알람 확인", "imp": 2}, {"id": "imrvofn8ql5d", "cat": "기록", "text": "가스 순찰 점검일지 작성\n\n6.방폭등 정상작동 여부 제외\n날씨는 병태사원님이랑 논의해서 작성", "imp": 2}, {"id": "imrvomtg3vez", "cat": "기록", "text": "시스템 점검일지 작성\n롤스크린 X / DVM 오류난거 보기\n(월요일에는 자세하게)", "imp": 2}]}, {"id": "b1600", "time": "16:00", "name": "오후 검침", "phase": "당직", "alarm": true, "items": [{"id": "i1600a", "cat": "검침", "text": "보일러 (1·2·3·4) 검침", "imp": 1}, {"id": "i1600b", "cat": "검침", "text": "흡수식 냉동기 검침", "imp": 1}, {"id": "i1600c", "cat": "검침", "text": "터보 냉동기 검침", "imp": 1}, {"id": "imruambaztmc", "cat": "기록", "text": "검침일지 작성", "imp": 0}]}, {"id": "b1800", "time": "18:00", "name": "", "phase": "당직", "alarm": false, "items": [{"id": "i1800a", "cat": "방송", "text": "퇴근 음악 방송", "imp": 0}]}, {"id": "b1840", "time": "18:40", "name": "", "phase": "당직", "alarm": false, "items": [{"id": "i1840a", "cat": "중지", "text": "흡수식 냉동기 기동 중지 - 희석운전 0초\n터보냉동기 중지\n⭐️⭐️⭐️", "imp": 1}]}, {"id": "imrucnwb8oqq", "time": "18:50", "name": "", "phase": "당직", "alarm": false, "items": [{"id": "imrucnwb8cgv", "cat": "기타", "text": "DVM 스케줄 기동정지 확인\n8층 확인\n⭐️⭐️⭐️", "imp": 0}]}, {"id": "b1900", "time": "19:00", "name": "계통 정지", "phase": "당직", "alarm": false, "items": [{"id": "imrvvft2if7n", "cat": "기타", "text": "퇴근방송 정지", "imp": 0}, {"id": "ims7dy3t6o86", "cat": "기타", "text": "보일러 기동 중지 \n압력 2.3kg/cm후 블로우다운\n\n1. 정지 스위치\n2.퇴수 밸브 천천히 개방\n3.퇴수밸브 잠금\n4.다시 가동\n5.급수 다 채울때까지 기다리기\n6.화면 사진 / 가스 사진 / 수도 사진 촬영\n\n⭐️⭐️⭐️\n사진은 블로우다운 물 채우고 사진찍기\n연소시간 차이를 보일러 운전시간에\n적기", "imp": 1}, {"id": "i1900a", "cat": "중지", "text": "공조기 A.H.U 차례로 기동 중지\n댐퍼 0퍼로 맞추기\n10시에 실외기실 고온 경보 울리면 공조기 32도내려갈때까지 틀어놓기⭐️⭐️⭐️", "imp": 1}, {"id": "i1900c", "cat": "중지", "text": "컨벡터 (안전벨) 중지⭐️⭐️⭐️", "imp": 0}, {"id": "imrucaotu2l4", "cat": "기타", "text": "A동 룸컨트롤러\n19:00분 기동정지 펌프 \n(B동은 항상 틀어져있어야 함)\n⭐️⭐️⭐️", "imp": 0}]}, {"id": "b2000", "time": "20:00", "name": "", "phase": "당직", "alarm": false, "items": [{"id": "i2000a", "cat": "순찰", "text": "가스 검침 사진\n순찰", "imp": 1}, {"id": "imrvzocu71pd", "cat": "기타", "text": "1. 에너지검침\n2. 보일러 급수\n3. 보일러 가스\n4. 수기작성\n5. 상황일지\n6. 수도,가스 그래프 그리기\n7. 내일 근무자 상황일지 만들기", "imp": 0}]}, {"id": "imrvx71lq1xa", "time": "21:00", "name": "", "phase": "당직", "alarm": false, "items": [{"id": "imsitt81wkiy", "cat": "기타", "text": "OHU-01,02 기동중지 되었는지 확인", "imp": 0}]}, {"id": "b2200", "time": "22:00", "name": "마감", "phase": "당직", "alarm": false, "items": [{"id": "i2200b", "cat": "전송", "text": "창문 단속 (메시지 전송)\n\nDVM 체크 완료\n창문단속 완료\n장비 특이사항 없습니다", "imp": 1}]}]};
+let schema;
+try{schema=JSON.parse(localStorage.getItem(SCHEMA_KEY));}catch(e){}
+if(!schema||!schema.blocks){schema=JSON.parse(JSON.stringify(DEFAULT));}
+if(!schema.settings)schema.settings={base:'dark',accent:'초록',fs:16};
+// 전역 라이트/다크 토글 반영 (개별 테마설정보다 우선, 저장은 안 함)
+try{
+  const gt=localStorage.getItem('app-theme');
+  if(gt==='light') schema.settings.base='light';
+  else if(gt==='dark' && schema.settings.base==='light') schema.settings.base='midnight';
+}catch(e){}
+// 마이그레이션: 금요일 업무 블록이 없으면 추가 (순찰코스에서 이관)
+if(!schema.blocks.some(b=>b.id==='bfri'||b.fri)){
+  const src=DEFAULT.blocks.find(b=>b.id==='bfri');
+  if(src){
+    const idx=schema.blocks.findIndex(b=>b.time==='08:00');
+    schema.blocks.splice(idx>-1?idx+1:schema.blocks.length,0,JSON.parse(JSON.stringify(src)));
+    saveSchema();
+  }
+}
+function saveSchema(){try{localStorage.setItem(SCHEMA_KEY,JSON.stringify(schema));}catch(e){} if(typeof ghCfg==='function'&&ghCfg().token)ghAutoBackupSoon();}
+
+const now=new Date();
+const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+const dow=now.getDay();
+let st={date:today,done:{},steps:{},memos:{},fired:{}};
+try{const p=JSON.parse(localStorage.getItem(STATE_KEY)); if(p&&p.date===today)st=Object.assign(st,p);}catch(e){}
+function saveState(){try{localStorage.setItem(STATE_KEY,JSON.stringify(st));}catch(e){}}
+
+let editMode=false, filterIncomplete=false, filterImportant=false;
+// 항목 사진 상태 (본 로직은 하단, 렌더에서 참조하므로 선행 선언)
+const PH_MAX=10;
+const phOpen=new Set();
+let phMap={};
+let phTarget=null;
+
+// ===== 근무조 (주1→주2→당직→비번, 4일 주기 + 캘린더 수정 반영) =====
+const SHIFTS=['주1','주2','당직','비번'];
+const TABS=['주1','주2','당직','비번','금요일'];
+const SHIFT_ANCHOR=new Date(2026,6,24); // 2026-07-24 = 주1 기준
+const OVR_KEY='shift-overrides-v1';
+function shiftOverrides(){
+  try{return JSON.parse(localStorage.getItem(OVR_KEY))||{};}catch(e){return {};}
+}
+function dkey(d){const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;}
+function shiftIdxOf(date){
+  const ov=shiftOverrides()[dkey(date)];
+  if(ov!==undefined&&ov!==null)return ov;
+  const a=new Date(SHIFT_ANCHOR.getFullYear(),SHIFT_ANCHOR.getMonth(),SHIFT_ANCHOR.getDate());
+  const d=new Date(date.getFullYear(),date.getMonth(),date.getDate());
+  const diff=Math.round((d-a)/86400000);
+  return ((diff%4)+4)%4;
+}
+function todayShiftIdx(){
+  const eff=new Date(now);
+  if(eff.getHours()<8){
+    // 새벽 시간대는 "어제가 실제로 당직이었을 때만" 전날 당직의 연장으로 취급한다.
+    // (어제가 주1/주2/비번이면 오늘은 그냥 오늘 스케줄대로 시작한다)
+    const yday=new Date(eff); yday.setDate(yday.getDate()-1);
+    if(shiftIdxOf(yday)===2) eff.setDate(eff.getDate()-1);
+  }
+  return shiftIdxOf(eff);
+}
+let curShift=todayShiftIdx();
+function blkMins(b){const[h,m]=b.time.split(':').map(Number);return h*60+m;}
+function blockShiftGroup(b){
+  const t=blkMins(b);
+  if(t>=480&&t<900) return 'day';     // 08:00~14:59 → 주1·주2
+  if(t>=900) return 'dutyEve';        // 15:00~ → 당직(저녁)
+  return 'dutyDawn';                  // ~07:59 → 당직(익일 새벽)
+}
+function itemInShift(it,shift){
+  if(shift==='주1'&&(it.text||'').includes('주2'))return false;
+  if(shift==='주2'&&(it.text||'').includes('주1'))return false;
+  return true;
+}
+function blockInShift(b,shift){
+  // 블록에 근무조가 직접 지정되어 있으면 최우선 적용
+  if(Array.isArray(b.shifts)&&b.shifts.length) return b.shifts.includes(shift);
+  // 금요일 업무 블록: 금요일 탭 항상 / 주1 탭은 '오늘이 금요일'일 때만
+  if(b.fri){
+    if(shift==='금요일') return true;
+    if(shift==='주1') return now.getDay()===5;
+    return false;
+  }
+  if(shift==='금요일') return false;
+  const g=blockShiftGroup(b);
+  if(shift==='당직') return g!=='day';
+  if(shift==='비번') return false;
+  if(g!=='day') return false;
+  if(shift==='주1'&&(b.name||'').includes('주2'))return false;
+  if(shift==='주2'&&(b.name||'').includes('주1'))return false;
+  return b.items.some(it=>itemInShift(it,shift));
+}
+function renderShiftTabs(){
+  const wrap=document.getElementById('shiftTabs'); if(!wrap)return;
+  wrap.innerHTML='';
+  const tIdx=todayShiftIdx();
+  TABS.forEach((s,i)=>{
+    const el=document.createElement('button');
+    el.className='stab'+(i===curShift?' sel':'')+(i===tIdx?' today':'');
+    el.innerHTML=s+(i===tIdx?'<span class="today-dot">오늘</span>':'');
+    el.onclick=()=>{curShift=i; render();};
+    wrap.appendChild(el);
+  });
+}
+const collapsed={};
+
+function hexRgba(hex,a){const n=parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
+function applyTheme(){
+  const b=BASES[schema.settings.base]||BASES.dark;
+  const acc=ACCENTS[schema.settings.accent]||ACCENTS.초록;
+  const r=document.documentElement.style;
+  r.setProperty('--bg',b.bg); r.setProperty('--surface',b.surface); r.setProperty('--raise',b.raise);
+  r.setProperty('--border',b.border); r.setProperty('--text',b.text); r.setProperty('--muted',b.muted); r.setProperty('--dim',b.dim);
+  r.setProperty('--acc',acc); r.setProperty('--acc-glow',hexRgba(acc,.4));
+  r.setProperty('--fs',(schema.settings.fs||16)+'px');
+}
+
+function applies(it){return !it.days||it.days.includes(dow);}
+function itemDone(it){
+  if(!applies(it))return true;
+  if(it.steps){const s=st.steps[it.id]||[]; return it.steps.every((_,i)=>s[i]);}
+  return !!st.done[it.id];
+}
+function catCol(c){return CATCOLOR[c]||CATCOLOR['기타'];}
+function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function render(){
+  applyTheme();
+  renderShiftTabs();
+  document.getElementById('dateStr').textContent=`${now.getMonth()+1}/${now.getDate()}`;
+  document.getElementById('dayStr').textContent=`(${DAYS[dow]})`;
+  const list=document.getElementById('list'); list.innerHTML='';
+  let lastPhase=null;
+
+  // 근무조별 표시 블록 구성 (편집모드에서도 동일 필터)
+  const shiftName=TABS[curShift];
+  let renderList=schema.blocks.map((b,bi)=>({b,bi}));
+  let dawnStartIdx=-1;
+  {
+    if(shiftName==='비번'){
+      const biList=renderList.filter(x=>Array.isArray(x.b.shifts)&&x.b.shifts.includes('비번'));
+      if(!biList.length){
+        const rest=document.createElement('div');
+        rest.className='rest-card';
+        rest.innerHTML=editMode
+          ? '<b>비번 탭에 지정된 항목이 없습니다</b><br>다른 탭에서 블록의 <b>근무조</b>를 편집하면<br>비번에도 표시할 수 있습니다.'
+          : '<b>오늘은 비번(휴무) 🛌</b><br>당직 마치고 푹 쉬는 날.<br>다음 근무 주기는 주1부터 다시 시작.';
+        list.appendChild(rest);
+        if(editMode){const ab=document.createElement('button'); ab.className='add-block'; ab.textContent='＋ 시간 블록 추가'; ab.onclick=addBlock; list.appendChild(ab);}
+        updateProgress(); markNow();
+        return;
+      }
+      renderList=biList.sort((a,c)=>blkMins(a.b)-blkMins(c.b));
+    }
+    if(shiftName==='당직'){
+      const eve=renderList.filter(x=>blockShiftGroup(x.b)==='dutyEve').sort((a,c)=>blkMins(a.b)-blkMins(c.b));
+      const dawn=renderList.filter(x=>blockShiftGroup(x.b)==='dutyDawn').sort((a,c)=>blkMins(a.b)-blkMins(c.b));
+      renderList=[...eve,...dawn]; dawnStartIdx=eve.length;
+    }else{
+      renderList=renderList.filter(x=>blockInShift(x.b,shiftName)).sort((a,c)=>blkMins(a.b)-blkMins(c.b));
+    }
+  }
+
+  renderList.forEach(({b,bi},ri)=>{
+    if(!editMode&&ri===dawnStartIdx&&dawnStartIdx>0){
+      const dv=document.createElement('div');
+      dv.className='dawn-divider';
+      dv.textContent='익일 새벽 · 당직 이어서';
+      list.appendChild(dv);
+    }
+    if(editMode&&b.phase!==lastPhase){
+      const ph=document.createElement('div');
+      ph.className='phase'+(b.phase==='당직'?' duty':'');
+      ph.textContent=b.phase==='당직'?'당직 · 오후 3시 출근':(b.phase||'주간');
+      list.appendChild(ph); lastPhase=b.phase;
+    }
+    const applicable=b.items.filter(it=>applies(it)&&(editMode||itemInShift(it,shiftName)));
+    const doneCnt=applicable.filter(itemDone).length;
+    const led=doneCnt===0?'':(applicable.length&&doneCnt===applicable.length?'done':'partial');
+
+    let visItems=b.items;
+    if(!editMode&&filterIncomplete)visItems=visItems.filter(it=>applies(it)&&!itemDone(it));
+    if(!editMode&&filterImportant)visItems=visItems.filter(it=>it.imp===2);
+    if(!editMode&&(filterIncomplete||filterImportant)&&visItems.length===0)return;
+
+    const block=document.createElement('div'); block.className='block'; block.dataset.bi=bi;
+    block.innerHTML=`<div class="rail"><div class="led ${led}"></div><div class="rail-line"></div></div>`;
+    const card=document.createElement('div'); card.className='card'; card.dataset.bid=b.id;
+    const isCol=collapsed[b.id];
+
+    const timeLabel=b.time2?`${b.time}~${b.time2}`:b.time;
+    const head=document.createElement('div'); head.className='c-head';
+    head.innerHTML=`<span class="c-time">${timeLabel}</span>${b.name?`<span class="c-name">${b.name}</span>`:''}${b.alarm?'<span class="c-alarm">⏰</span>':''}`;
+    if(!editMode){
+      const cb=document.createElement('span'); cb.className='collapse-btn'; cb.textContent=isCol?'▸ 펼치기':'▾';
+      cb.onclick=()=>{collapsed[b.id]=!collapsed[b.id]; render();};
+      head.appendChild(cb);
+    }
+    card.appendChild(head);
+
+    const be=document.createElement('div'); be.className='block-edit';
+    be.innerHTML=`<button class="be-btn" data-a="editblock">시간·이름·알람</button>
+      <button class="be-btn" data-a="up">▲ 위로</button>
+      <button class="be-btn" data-a="down">▼ 아래로</button>
+      <button class="be-btn del" data-a="delblock">블록 삭제</button>`;
+    be.querySelector('[data-a=editblock]').onclick=()=>editBlock(bi);
+    be.querySelector('[data-a=up]').onclick=()=>moveBlock(bi,-1);
+    be.querySelector('[data-a=down]').onclick=()=>moveBlock(bi,1);
+    be.querySelector('[data-a=delblock]').onclick=()=>delBlock(bi);
+    card.appendChild(be);
+
+    if(!isCol||editMode){
+      b.items.forEach((it,ii)=>{
+        if(!editMode&&!itemInShift(it,shiftName))return;
+        if(!editMode&&filterIncomplete&&(!applies(it)||itemDone(it)))return;
+        if(!editMode&&filterImportant&&it.imp!==2)return;
+        const na=!applies(it), done=!na&&itemDone(it);
+        const row=document.createElement('div');
+        row.className='item'+(done?' done':'')+(na?' na':'')+(it.imp===2?' imp2-row':''); row.dataset.bi=bi; row.dataset.ii=ii;
+        const memo=st.memos[it.id]||'';
+        let dayBadge='';
+        if(it.days){dayBadge=it.days.length===1?`<span class="day-badge">${DAYS[it.days[0]]}</span>`:`<span class="day-badge">${DAYS[it.days[0]]}~${DAYS[it.days[it.days.length-1]]}</span>`;}
+        const cc=catCol(it.cat);
+        let impBadge=''; if(it.imp===1)impBadge='<span class="imp imp1">중요</span>'; if(it.imp===2)impBadge='<span class="imp imp2">필수</span>';
+        row.innerHTML=`
+          <div class="tap">
+            <div class="chk">${CHECK_SVG}</div>
+            <div class="i-body">
+              <div class="i-text">${escapeHtml(it.text)}</div>
+              <div class="i-meta">
+                <span class="cat" style="color:${cc[0]};background:${cc[1]}">${it.cat}</span>
+                ${impBadge}${dayBadge}
+                ${na?'<span class="na-tag">오늘 해당 없음</span>':''}
+                ${!na?`<span class="memo-btn ${memo?'has':''}">✎ 메모</span>`:''}
+                ${!editMode?`<span class="ph-btn ${photoCount(it.id)>0?'has':''}" data-ph="${it.id}">📷${photoCount(it.id)>0?' '+photoCount(it.id):''} ${phOpen.has(it.id)?'▾':'▸'}</span>`:''}
+              </div>
+            </div>
+          </div>
+          <div class="edit-ctrls">
+            <button class="mini" data-a="edititem">✏️</button>
+            <button class="mini" data-a="iup">▲</button>
+            <button class="mini" data-a="idown">▼</button>
+            <button class="mini del" data-a="delitem">✕</button>
+          </div>`;
+        if(!na&&!editMode){
+          row.querySelector('.tap').onclick=()=>toggleItem(it);
+          const mb=row.querySelector('.memo-btn'); if(mb)mb.onclick=e=>{e.stopPropagation(); document.getElementById('memo-'+it.id).classList.toggle('hidden');};
+          const pb=row.querySelector('.ph-btn'); if(pb)pb.onclick=e=>{e.stopPropagation(); if(phOpen.has(it.id))phOpen.delete(it.id); else phOpen.add(it.id); render();};
+        }
+        row.querySelector('[data-a=edititem]').onclick=()=>editItem(bi,ii);
+        row.querySelector('[data-a=iup]').onclick=()=>moveItem(bi,ii,-1);
+        row.querySelector('[data-a=idown]').onclick=()=>moveItem(bi,ii,1);
+        row.querySelector('[data-a=delitem]').onclick=()=>delItem(bi,ii);
+        card.appendChild(row);
+
+        if(!na&&!editMode){
+          const mbox=document.createElement('div'); mbox.className='memo-box'+(memo?'':' hidden'); mbox.id='memo-'+it.id;
+          mbox.innerHTML=`<textarea rows="2" placeholder="메모 (이상 사항·특이점)">${escapeHtml(memo)}</textarea>`;
+          mbox.querySelector('textarea').addEventListener('input',e=>{st.memos[it.id]=e.target.value; saveState(); const btn=row.querySelector('.memo-btn'); if(btn)btn.classList.toggle('has',!!e.target.value);});
+          card.appendChild(mbox);
+        }
+
+        // 항목 사진 패널
+        if(!editMode&&phOpen.has(it.id)){
+          card.appendChild(buildPhotoPanel(it.id));
+        }
+
+        if(it.steps&&!na&&!editMode){
+          const stp=st.steps[it.id]||[]; const cnt=it.steps.filter((_,i)=>stp[i]).length;
+          const wrap=document.createElement('div'); wrap.className='steps';
+          wrap.innerHTML=`<div class="steps-head"><span class="chev">▶</span>블로우다운 절차<span class="cnt">${cnt}/${it.steps.length}</span></div><div class="steps-body hidden"></div>`;
+          const body=wrap.querySelector('.steps-body');
+          it.steps.forEach((s,i)=>{
+            const sd=!!stp[i]; const sr=document.createElement('div'); sr.className='step'+(sd?' done':'');
+            sr.innerHTML=`<span class="step-num">${i+1}</span><div class="step-chk">${CHECK_SVG}</div><span class="step-text">${escapeHtml(s)}</span>`;
+            sr.onclick=()=>{if(!st.steps[it.id])st.steps[it.id]=[]; st.steps[it.id][i]=!st.steps[it.id][i]; saveState(); render();};
+            body.appendChild(sr);
+          });
+          const h=wrap.querySelector('.steps-head');
+          h.onclick=()=>{body.classList.toggle('hidden'); h.querySelector('.chev').classList.toggle('open');};
+          card.appendChild(wrap);
+        }
+      });
+      if(editMode){const ai=document.createElement('button'); ai.className='be-btn'; ai.style.margin='4px 0 6px'; ai.textContent='＋ 항목 추가'; ai.onclick=()=>addItem(bi); card.appendChild(ai);}
+    }
+    block.appendChild(card); list.appendChild(block);
+  });
+
+  if(editMode){const ab=document.createElement('button'); ab.className='add-block'; ab.textContent='＋ 시간 블록 추가'; ab.onclick=addBlock; list.appendChild(ab);}
+  updateProgress(); markNow();
+}
+
+function toggleItem(it){st.done[it.id]=!st.done[it.id]; saveState(); render();}
+
+function updateProgress(){
+  let tot=0,dn=0;
+  const shiftName=TABS[curShift];
+  schema.blocks.forEach(b=>{
+    if(!editMode){
+      if(shiftName==='비번')return;
+      if(shiftName==='당직'){ if(blockShiftGroup(b)==='day')return; }
+      else if(!blockInShift(b,shiftName))return;
+    }
+    b.items.forEach(it=>{
+      if(!applies(it))return;
+      if(!editMode&&!itemInShift(it,shiftName))return;
+      tot++; if(itemDone(it))dn++;
+    });
+  });
+  const pct=tot?Math.round(dn/tot*100):0;
+  document.getElementById('barFill').style.width=pct+'%';
+  document.getElementById('barPct').textContent=`${dn}/${tot}`;
+}
+function markNow(){
+  const mins=now.getHours()*60+now.getMinutes(); let next=null;
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('now'));
+  const shiftName=TABS[curShift];
+  schema.blocks.forEach((b)=>{
+    if(!editMode){
+      if(shiftName==='비번')return;
+      if(shiftName==='당직'){ if(blockShiftGroup(b)==='day')return; }
+      else if(!blockInShift(b,shiftName))return;
+    }
+    const bm=blkMins(b);
+    const app=b.items.filter(it=>applies(it)&&(editMode||itemInShift(it,shiftName)));
+    const allDone=app.length&&app.every(itemDone);
+    if(bm>=mins-30&&!allDone&&!next)next={b};
+  });
+  const nt=document.getElementById('nextTask');
+  if(next&&!editMode){
+    const card=document.querySelector(`.card[data-bid="${next.b.id}"]`);
+    if(card){card.classList.add('now'); const t=document.createElement('span'); t.className='now-tag'; t.textContent='다음'; card.querySelector('.c-head').appendChild(t);}
+    nt.innerHTML=`다음 할 일 · <b>${next.b.time}</b> ${next.b.name||next.b.items[0].text}`;
+  }else nt.innerHTML=editMode?'편집 모드 — 항목을 수정하세요':(shiftName==='비번'?'오늘은 휴무입니다':'완료 항목을 체크하세요');
+}
+
+
+
+function moveBlock(i,d){
+  const list=visibleBlockIdx();
+  const p=list.indexOf(i); if(p<0)return;
+  const q=p+d; if(q<0||q>=list.length)return;
+  const j=list[q];
+  [schema.blocks[i],schema.blocks[j]]=[schema.blocks[j],schema.blocks[i]];
+  saveSchema(); render();
+}
+function moveItem(bi,ii,d){
+  const arr=schema.blocks[bi].items;
+  const j=ii+d; if(j<0||j>=arr.length)return;
+  [arr[ii],arr[j]]=[arr[j],arr[ii]];
+  saveSchema(); render();
+}
+// 현재 탭에 보이는 블록의 원본 인덱스 목록 (같은 탭 안에서만 순서 이동)
+function visibleBlockIdx(){
+  const sh=TABS[curShift];
+  return schema.blocks.map((b,i)=>({b,i}))
+    .filter(x=> sh==='당직' ? blockShiftGroup(x.b)!=='day' : blockInShift(x.b,sh))
+    .sort((a,c)=>blkMins(a.b)-blkMins(c.b)).map(x=>x.i);
+}
+function delBlock(i){appConfirm(`"${schema.blocks[i].time}" 블록을 삭제할까요?`,()=>{schema.blocks.splice(i,1); saveSchema(); render();});}
+function delItem(bi,ii){appConfirm('이 항목을 삭제할까요?',()=>{schema.blocks[bi].items.splice(ii,1); saveSchema(); render();});}
+function addItem(bi){schema.blocks[bi].items.push({id:uid(),cat:'기타',text:'새 항목',imp:0}); saveSchema(); render(); editItem(bi,schema.blocks[bi].items.length-1);}
+function addBlock(){schema.blocks.push({id:uid(),time:'00:00',name:'',phase:'주간',alarm:false,items:[{id:uid(),cat:'기타',text:'새 항목',imp:0}]}); saveSchema(); render();}
+
+const overlay=document.getElementById('overlay'), sheet=document.getElementById('sheet'), sheetBody=document.getElementById('sheetBody');
+function openSheet(html){sheetBody.innerHTML=html; overlay.classList.add('show'); sheet.classList.add('show');}
+function closeSheet(){overlay.classList.remove('show'); sheet.classList.remove('show');}
+overlay.onclick=closeSheet;
+
+function editItem(bi,ii){
+  const it=schema.blocks[bi].items[ii];
+  const catChips=CATS.map(c=>`<div class="opt ${it.cat===c?'sel':''}" data-cat="${c}">${c}</div>`).join('');
+  const dayChips=DAYS.map((d,i)=>`<div class="opt ${it.days&&it.days.includes(i)?'sel':''}" data-day="${i}">${d}</div>`).join('');
+  openSheet(`
+    <h2>항목 편집</h2>
+    <div class="field"><label>이름</label><textarea id="ei-text" rows="2">${escapeHtml(it.text)}</textarea></div>
+    <div class="field"><label>중요도</label><div class="imp-opts">
+      <div class="opt ${it.imp===0?'sel':''}" data-imp="0">보통</div>
+      <div class="opt ${it.imp===1?'sel':''}" data-imp="1">중요</div>
+      <div class="opt ${it.imp===2?'sel':''}" data-imp="2">필수</div></div></div>
+    <div class="field"><label>분류</label><div class="cat-opts">${catChips}</div></div>
+    <div class="field"><label>요일 조건 <span style="color:var(--dim)">(선택 없으면 매일)</span></label><div class="day-opts">${dayChips}</div></div>
+    <div class="btn-row"><button class="big-btn ghost" onclick="closeSheet()">취소</button><button class="big-btn" id="ei-save">저장</button></div>
+  `);
+  let imp=it.imp, cat=it.cat, days=it.days?[...it.days]:[];
+  sheetBody.querySelectorAll('[data-imp]').forEach(o=>o.onclick=()=>{imp=+o.dataset.imp; sheetBody.querySelectorAll('[data-imp]').forEach(x=>x.classList.toggle('sel',+x.dataset.imp===imp));});
+  sheetBody.querySelectorAll('[data-cat]').forEach(o=>o.onclick=()=>{cat=o.dataset.cat; sheetBody.querySelectorAll('[data-cat]').forEach(x=>x.classList.toggle('sel',x.dataset.cat===cat));});
+  sheetBody.querySelectorAll('[data-day]').forEach(o=>o.onclick=()=>{const d=+o.dataset.day; if(days.includes(d))days=days.filter(x=>x!==d); else days.push(d); days.sort((a,b)=>a-b); o.classList.toggle('sel');});
+  document.getElementById('ei-save').onclick=()=>{it.text=document.getElementById('ei-text').value.trim()||it.text; it.imp=imp; it.cat=cat; if(days.length===0||days.length===7)delete it.days; else it.days=days; saveSchema(); closeSheet(); render();};
+}
+
+function editBlock(bi){
+  const b=schema.blocks[bi];
+  openSheet(`
+    <h2>시간 블록 편집</h2>
+    <div class="field"><label>시작 시간</label><input type="time" id="eb-time" value="${b.time}"></div>
+    <div class="field"><label>종료 시간 <span style="color:var(--dim)">(선택)</span></label><input type="time" id="eb-time2" value="${b.time2||''}"></div>
+    <div class="field"><label>블록 이름 <span style="color:var(--dim)">(선택)</span></label><input type="text" id="eb-name" value="${escapeHtml(b.name||'')}" placeholder="예: 오전 검침"></div>
+    <div class="field"><label>구분</label><div class="imp-opts">
+      <div class="opt ${b.phase!=='당직'?'sel':''}" data-ph="주간">주간</div>
+      <div class="opt ${b.phase==='당직'?'sel':''}" data-ph="당직">당직</div></div></div>
+    <div class="field"><label>표시할 근무조 <span style="color:var(--dim)">(선택 안 하면 시간대로 자동 판단)</span></label>
+      <div class="shift-opts">${['주1','주2','당직','비번','금요일'].map(s=>
+        `<div class="sopt ${(b.shifts||[]).includes(s)?'sel':''}" data-sf="${s}">${s}</div>`).join('')}</div></div>
+    <div class="row-set" style="border:none;padding:14px 0 4px"><div><div style="font-weight:600">시간 알람</div><div class="set-desc">앱이 열려 있을 때 알림·소리로 알려줍니다</div></div><div class="toggle ${b.alarm?'on':''}" id="eb-alarm"></div></div>
+    <div class="btn-row"><button class="big-btn ghost" onclick="closeSheet()">취소</button><button class="big-btn" id="eb-save">저장</button></div>
+  `);
+  let ph=b.phase, alarm=b.alarm;
+  const sfSel=new Set(b.shifts||[]);
+  sheetBody.querySelectorAll('[data-ph]').forEach(o=>o.onclick=()=>{ph=o.dataset.ph; sheetBody.querySelectorAll('[data-ph]').forEach(x=>x.classList.toggle('sel',x.dataset.ph===ph));});
+  sheetBody.querySelectorAll('[data-sf]').forEach(o=>o.onclick=()=>{
+    const s=o.dataset.sf;
+    if(sfSel.has(s))sfSel.delete(s); else sfSel.add(s);
+    o.classList.toggle('sel',sfSel.has(s));
+  });
+  document.getElementById('eb-alarm').onclick=function(){alarm=!alarm; this.classList.toggle('on',alarm);};
+  document.getElementById('eb-save').onclick=()=>{b.time=document.getElementById('eb-time').value||b.time; const t2=document.getElementById('eb-time2').value; if(t2)b.time2=t2; else delete b.time2; b.name=document.getElementById('eb-name').value.trim(); b.phase=ph; b.alarm=alarm; if(sfSel.size)b.shifts=[...sfSel]; else delete b.shifts; saveSchema(); closeSheet(); render(); if(alarm)ensureNotif();};
+}
+
+function openSettings(){
+  const swAcc=Object.entries(ACCENTS).map(([k,v])=>`<div class="sw ${schema.settings.accent===k?'sel':''}" data-acc="${k}" style="background:${v}"></div>`).join('');
+  const baseOpts=[['dark','다크'],['midnight','미드나잇'],['light','라이트']].map(([k,l])=>`<div class="base-opt ${schema.settings.base===k?'sel':''}" data-base="${k}">${l}</div>`).join('');
+  openSheet(`
+    <h2>설정</h2>
+    <div class="sec"><div class="sec-t">배경 테마</div><div class="base-opts">${baseOpts}</div></div>
+    <div class="sec"><div class="sec-t">강조 색상</div><div class="swatches">${swAcc}</div></div>
+    <div class="sec"><div class="sec-t">글자 크기</div>
+      <div class="row-set" style="border:none"><span style="color:var(--muted);font-size:13px">작게</span>
+      <input type="range" id="fsRange" min="14" max="20" step="1" value="${schema.settings.fs||16}" style="flex:1;margin:0 12px;accent-color:var(--acc)">
+      <span style="color:var(--muted);font-size:13px">크게</span></div></div>
+    <div class="sec"><div class="sec-t">알람</div>
+      <button class="big-btn ghost" id="notifBtn">🔔 알림 권한 켜기</button>
+      <div class="set-desc" style="margin:8px 0 12px">앱이 열려 있을 때 알람이 울립니다. 앱을 닫아도 울리게 하려면 아래 캘린더 내보내기를 쓰세요.</div>
+      <button class="big-btn ghost" id="icsBtn">📅 알람용 캘린더(.ics) 내보내기</button>
+      <div class="set-desc" style="margin-top:8px">알람 켠 블록들을 매일 반복 일정으로 만들어 아이폰 캘린더에 넣습니다. 앱이 꺼져 있어도 알림이 옵니다.</div></div>
+    <div class="sec"><div class="sec-t">백업 / 복원</div>
+      <div class="btn-row"><button class="big-btn ghost" id="expBtn">내보내기</button><button class="big-btn ghost" id="impBtn">불러오기</button></div>
+      <div class="set-desc" style="margin-top:8px">편집한 내용을 파일로 저장/복구합니다. 폰 바꿀 때 유용합니다.</div>
+      <input type="file" id="impFile" accept=".json" class="hidden"></div>
+    <div class="sec"><button class="big-btn danger" id="restoreBtn">기본 스케줄로 되돌리기</button></div>
+    <button class="big-btn" onclick="closeSheet()" style="margin-top:4px">닫기</button>
+  `);
+  sheetBody.querySelectorAll('[data-base]').forEach(o=>o.onclick=()=>{schema.settings.base=o.dataset.base; saveSchema(); sheetBody.querySelectorAll('[data-base]').forEach(x=>x.classList.toggle('sel',x===o)); applyTheme();});
+  sheetBody.querySelectorAll('[data-acc]').forEach(o=>o.onclick=()=>{schema.settings.accent=o.dataset.acc; saveSchema(); sheetBody.querySelectorAll('[data-acc]').forEach(x=>x.classList.toggle('sel',x===o)); applyTheme();});
+  document.getElementById('fsRange').oninput=e=>{schema.settings.fs=+e.target.value; saveSchema(); applyTheme();};
+  document.getElementById('notifBtn').onclick=()=>ensureNotif(true);
+  document.getElementById('icsBtn').onclick=exportICS;
+  document.getElementById('expBtn').onclick=exportBackup;
+  document.getElementById('impBtn').onclick=()=>document.getElementById('impFile').click();
+  document.getElementById('impFile').onchange=importBackup;
+  document.getElementById('restoreBtn').onclick=()=>{appConfirm('편집한 내용이 사라지고 처음 스케줄로 돌아갑니다. 진행할까요?',()=>{const s=schema.settings; schema=JSON.parse(JSON.stringify(DEFAULT)); schema.settings=s; saveSchema(); closeSheet(); render();});};
+}
+
+function ensureNotif(ask){
+  if(!('Notification'in window)){if(ask)toast('이 브라우저는 알림을 지원하지 않습니다'); return;}
+  if(Notification.permission==='granted'){if(ask)toast('알림이 켜져 있습니다'); return;}
+  if(Notification.permission!=='denied')Notification.requestPermission().then(p=>{if(p==='granted')toast('알림이 켜졌습니다'); else if(ask)toast('설정에서 알림을 허용해주세요');});
+  else if(ask)toast('브라우저 설정에서 알림을 허용해주세요');
+}
+function beep(){try{const c=new(window.AudioContext||window.webkitAudioContext)(); const o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value=880; o.type='sine'; g.gain.setValueAtTime(.001,c.currentTime); g.gain.exponentialRampToValueAtTime(.3,c.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.5); o.start(); o.stop(c.currentTime+.5);}catch(e){}}
+function toast(msg){const t=document.getElementById('toast'); t.innerHTML=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),4000);}
+function fireAlarm(b){beep(); const label=`${b.time} ${b.name||b.items[0].text}`; toast('⏰ '+label); if('Notification'in window&&Notification.permission==='granted'){try{new Notification('업무 알람 ⏰',{body:label});}catch(e){}}}
+setInterval(()=>{
+  const d=new Date(); const hm=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  schema.blocks.forEach(b=>{if(b.alarm&&b.time===hm&&!st.fired[b.id]){st.fired[b.id]=true; saveState(); fireAlarm(b);}});
+},15000);
+
+function exportICS(){
+  const dt=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  let ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//facility//checklist//KR\r\nCALSCALE:GREGORIAN\r\n';
+  let n=0;
+  schema.blocks.forEach(b=>{if(!b.alarm)return; n++; const t=b.time.replace(':','')+'00'; const title=(b.name||b.items[0].text).replace(/[,;\\]/g,'');
+    ics+=`BEGIN:VEVENT\r\nUID:${b.id}@facility\r\nDTSTART;TZID=Asia/Seoul:${dt}T${t}\r\nDURATION:PT5M\r\nRRULE:FREQ=DAILY\r\nSUMMARY:⏰ ${title}\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\nTRIGGER:PT0M\r\nDESCRIPTION:${title}\r\nEND:VALARM\r\nEND:VEVENT\r\n`;});
+  ics+='END:VCALENDAR';
+  if(n===0){toast('알람이 켜진 블록이 없습니다'); return;}
+  download('업무알람.ics',ics,'text/calendar'); toast(`${n}개 알람을 캘린더 파일로 내보냈습니다`);
+}
+function exportBackup(){download('체크리스트_백업.json',JSON.stringify(schema,null,2),'application/json'); toast('백업 파일을 저장했습니다');}
+function importBackup(e){const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{try{const d=JSON.parse(r.result); if(!d.blocks)throw 0; schema=d; if(!schema.settings)schema.settings={base:'dark',accent:'초록',fs:16};
+// 전역 라이트/다크 토글 반영 (개별 테마설정보다 우선, 저장은 안 함)
+try{
+  const gt=localStorage.getItem('app-theme');
+  if(gt==='light') schema.settings.base='light';
+  else if(gt==='dark' && schema.settings.base==='light') schema.settings.base='midnight';
+}catch(e){} saveSchema(); closeSheet(); render(); toast('복원 완료');}catch(err){toast('올바른 백업 파일이 아닙니다');}}; r.readAsText(f);}
+function download(name,content,type){const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},500);}
+
+document.getElementById('editBtn').onclick=function(){editMode=!editMode; this.classList.toggle('on',editMode); document.body.classList.toggle('edit',editMode); if(editMode){filterIncomplete=filterImportant=false; document.getElementById('fltIncomplete').classList.remove('on'); document.getElementById('fltImportant').classList.remove('on');} render();};
+document.getElementById('setBtn').onclick=openSettings;
+document.getElementById('fltIncomplete').onclick=function(){filterIncomplete=!filterIncomplete; this.classList.toggle('on',filterIncomplete); render();};
+document.getElementById('fltImportant').onclick=function(){filterImportant=!filterImportant; this.classList.toggle('on',filterImportant); render();};
+document.getElementById('resetBtn').onclick=()=>{appConfirm('오늘 체크 기록을 모두 지울까요?',()=>{st={date:today,done:{},steps:{},memos:{},fired:{}}; saveState(); render();});};
+
+render();
+
+// ===== 업무 메모장 (영구 저장) =====
+(function(){
+  const WM_KEY='daily-workmemo-v1';
+  const ta=document.getElementById('workMemo');
+  if(!ta)return;
+  try{ta.value=localStorage.getItem(WM_KEY)||'';}catch(e){}
+  let t=null;
+  ta.addEventListener('input',()=>{
+    clearTimeout(t);
+    t=setTimeout(()=>{try{localStorage.setItem(WM_KEY,ta.value);}catch(e){} if(typeof ghCfg==='function'&&ghCfg().token)ghAutoBackupSoon();},600);
+  });
+})();
+
+// ==================== 항목 사진 (IndexedDB + GitHub 백업) ====================
+// --- IndexedDB ---
+let _phdb=null;
+function phdb(){
+  if(_phdb)return _phdb;
+  _phdb=new Promise((res,rej)=>{
+    try{
+      const rq=indexedDB.open('dailyPhotosDB',1);
+      rq.onupgradeneeded=()=>{const db=rq.result; if(!db.objectStoreNames.contains('photos'))db.createObjectStore('photos',{keyPath:'key'});};
+      rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error);
+    }catch(e){rej(e);}
+  });
+  return _phdb;
+}
+async function phPut(rec){const db=await phdb(); return new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite'); tx.objectStore('photos').put(rec); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);});}
+async function phDel(key){const db=await phdb(); return new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite'); tx.objectStore('photos').delete(key); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);});}
+async function phAll(){const db=await phdb(); return new Promise((res,rej)=>{const out=[]; const tx=db.transaction('photos','readonly'); const c=tx.objectStore('photos').openCursor(); c.onsuccess=e=>{const cu=e.target.result; if(cu){out.push(cu.value); cu.continue();}else res(out);}; c.onerror=()=>rej(c.error);});}
+
+function rebuildMap(list){
+  phMap={};
+  list.sort((a,b)=>a.ts-b.ts).forEach(r=>{(phMap[r.itemId]=phMap[r.itemId]||[]).push(r);});
+}
+function photoCount(id){return (phMap[id]||[]).length;}
+function photoSrc(r){return r.dataURL||r.url||'';}
+
+async function phBoot(){
+  try{rebuildMap(await phAll());}catch(e){phMap={};}
+  render();
+  // 연결설정 있으면 백그라운드로 매니페스트 병합
+  if(ghCfg().token) ghPull(false);
+  ghStatus();
+}
+
+// --- 패널 ---
+function buildPhotoPanel(itemId){
+  const list=phMap[itemId]||[];
+  const p=document.createElement('div'); p.className='photo-panel';
+  const grid=document.createElement('div'); grid.className='ph-grid';
+  list.forEach((r,i)=>{
+    const t=document.createElement('div'); t.className='ph-thumb';
+    t.innerHTML=`<img src="${photoSrc(r)}" loading="lazy">${r.synced||r.url?'<span class="cloud">☁</span>':''}`;
+    t.onclick=()=>openLightbox(itemId,i);
+    grid.appendChild(t);
+  });
+  if(list.length<PH_MAX){
+    const add=document.createElement('button'); add.className='ph-add';
+    add.innerHTML='<span class="pl">＋</span>추가';
+    add.onclick=()=>{phTarget=itemId; document.getElementById('photoInput').click();};
+    grid.appendChild(add);
+  }
+  p.appendChild(grid);
+  const cap=document.createElement('div'); cap.className='ph-cap';
+  cap.textContent=`${list.length}/${PH_MAX}장`+(list.some(r=>!r.synced&&r.dataURL)?' · 미백업 있음':'');
+  p.appendChild(cap);
+  return p;
+}
+
+document.getElementById('photoInput').addEventListener('change', async (e)=>{
+  const files=[...(e.target.files||[])]; e.target.value='';
+  if(!phTarget||!files.length)return;
+  const cur=photoCount(phTarget);
+  const room=PH_MAX-cur;
+  if(room<=0){toast('최대 '+PH_MAX+'장까지 저장됩니다'); return;}
+  const take=files.slice(0,room);
+  for(const f of take){
+    try{
+      const dataURL=await compressImage(f,1000,.82);
+      const ts=Date.now()+Math.floor(Math.random()*99);
+      const rec={key:`${phTarget}-${ts}`, itemId:phTarget, ts, dataURL, synced:false};
+      await phPut(rec);
+      (phMap[phTarget]=phMap[phTarget]||[]).push(rec);
+    }catch(err){}
+  }
+  render();
+  toast(take.length+'장 저장됨');
+  if(ghCfg().token) ghAutoBackupSoon();
+});
+function compressImage(file,maxW,q){
+  return new Promise((res,rej)=>{
+    const rd=new FileReader();
+    rd.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        const sc=img.width>maxW?maxW/img.width:1;
+        const cv=document.createElement('canvas');
+        cv.width=Math.round(img.width*sc); cv.height=Math.round(img.height*sc);
+        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+        res(cv.toDataURL('image/jpeg',q));
+      };
+      img.onerror=rej; img.src=ev.target.result;
+    };
+    rd.onerror=rej; rd.readAsDataURL(file);
+  });
+}
+
+// --- 라이트박스 ---
+let lb={itemId:null, idx:0};
+function openLightbox(itemId, idx){
+  lb={itemId, idx};
+  const ov=document.createElement('div'); ov.className='lb-ov'; ov.id='lbOv';
+  ov.innerHTML=`
+    <div class="lb-top">
+      <span class="lb-cnt" id="lbCnt"></span>
+      <div class="lb-acts">
+        <button onclick="lbDelete()">🗑</button>
+        <button onclick="closeLightbox()">✕</button>
+      </div>
+    </div>
+    <div class="lb-body" id="lbBody">
+      <div class="lb-nav prev" onclick="lbMove(-1)">‹</div>
+      <img id="lbImg" src="">
+      <div class="lb-nav next" onclick="lbMove(1)">›</div>
+    </div>`;
+  document.body.appendChild(ov);
+  // 스와이프
+  let sx=null;
+  ov.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;},{passive:true});
+  ov.addEventListener('touchend',e=>{
+    if(sx===null)return;
+    const dx=e.changedTouches[0].clientX-sx; sx=null;
+    if(Math.abs(dx)>45) lbMove(dx>0?-1:1);
+  },{passive:true});
+  lbShow();
+}
+function lbShow(){
+  const list=phMap[lb.itemId]||[];
+  if(!list.length){closeLightbox(); return;}
+  lb.idx=Math.max(0,Math.min(lb.idx,list.length-1));
+  document.getElementById('lbImg').src=photoSrc(list[lb.idx]);
+  document.getElementById('lbCnt').textContent=`${lb.idx+1} / ${list.length}`;
+  const p=document.querySelector('#lbOv .lb-nav.prev'), n=document.querySelector('#lbOv .lb-nav.next');
+  p.style.visibility=lb.idx>0?'visible':'hidden';
+  n.style.visibility=lb.idx<list.length-1?'visible':'hidden';
+}
+function lbMove(d){const list=phMap[lb.itemId]||[]; const ni=lb.idx+d; if(ni<0||ni>=list.length)return; lb.idx=ni; lbShow();}
+function closeLightbox(){const o=document.getElementById('lbOv'); if(o)o.remove();}
+function lbDelete(){
+  appConfirm('이 사진을 삭제할까요?', async ()=>{
+    const list=phMap[lb.itemId]||[];
+    const r=list[lb.idx]; if(!r)return;
+    list.splice(lb.idx,1);
+    try{await phDel(r.key);}catch(e){}
+    if(list.length){lbShow();}else{closeLightbox();}
+    render();
+    if(ghCfg().token) ghAutoBackupSoon(); // 매니페스트 갱신
+  });
+}
+
+// --- GitHub 동기화 ---
+const GH_KEY='gh-sync-v1';
+function ghCfg(){try{return JSON.parse(localStorage.getItem(GH_KEY))||{};}catch(e){return {};}}
+function ghSave(c){try{localStorage.setItem(GH_KEY,JSON.stringify(c));}catch(e){}}
+function ghStatus(msg){
+  const el=document.getElementById('ghStatus'); if(!el)return;
+  if(msg!==undefined){el.textContent=msg; return;}
+  const c=ghCfg();
+  el.textContent=c.token?`연결됨: ${c.owner}/${c.repo} · 사진 추가 시 자동 백업`:'미연결 — ⚙ 연결설정에서 깃허브 토큰을 등록하면 자동 백업됩니다';
+}
+function ghConfigSheet(){
+  const c=ghCfg();
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:250;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:360px;width:100%;padding:20px 18px;">
+    <div style="font-size:15.5px;font-weight:800;margin-bottom:6px;">깃허브 연결설정</div>
+    <div style="font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:12px;">github.com → Settings → Developer settings → Fine-grained tokens에서<br>이 저장소에 <b>Contents: Read/Write</b> 권한 토큰을 만들어 붙여넣으세요.<br><b style="color:var(--imp1,#ff8a80);">⚠ 공개 저장소면 사진도 공개됩니다</b></div>
+    <input id="gh-owner" placeholder="계정 (owner)" value="${c.owner||'costa-godo'}" style="width:100%;padding:11px;margin-bottom:7px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;">
+    <input id="gh-repo" placeholder="저장소 (repo)" value="${c.repo||'costa-godo.github.io'}" style="width:100%;padding:11px;margin-bottom:7px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;">
+    <input id="gh-token" type="password" placeholder="토큰 (github_pat_...)" value="${c.token||''}" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;">
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button data-r="n" style="flex:1;padding:12px;border-radius:11px;border:1px solid var(--border);background:var(--raise);color:var(--muted);font-weight:700;">취소</button>
+      <button data-r="y" style="flex:1;padding:12px;border-radius:11px;border:none;background:var(--acc);color:#0e1316;font-weight:800;">저장</button>
+    </div></div>`;
+  ov.addEventListener('click',e=>{
+    const r=e.target.dataset&&e.target.dataset.r;
+    if(r==='y'){
+      ghSave({owner:ov.querySelector('#gh-owner').value.trim(), repo:ov.querySelector('#gh-repo').value.trim(), branch:'main', token:ov.querySelector('#gh-token').value.trim()});
+      ov.remove(); ghStatus(); toast('연결설정 저장됨');
+    }else if(r==='n'||e.target===ov){ov.remove();}
+  });
+  document.body.appendChild(ov);
+}
+async function ghApi(path, opts){
+  const c=ghCfg();
+  const res=await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}/contents/${path}`,{
+    ...opts,
+    headers:{'Authorization':'Bearer '+c.token,'Accept':'application/vnd.github+json',...(opts&&opts.headers||{})}
+  });
+  return res;
+}
+let ghBusy=false, ghTimer=null;
+function ghAutoBackupSoon(){clearTimeout(ghTimer); ghTimer=setTimeout(()=>ghBackup(false), 2500);}
+async function ghBackup(manual){
+  const c=ghCfg();
+  if(!c.token){ if(manual){toast('먼저 ⚙ 연결설정을 해주세요'); ghConfigSheet();} return; }
+  if(ghBusy)return; ghBusy=true;
+  ghStatus('백업 중...');
+  try{
+    // 1) 미동기 사진 업로드
+    const all=Object.values(phMap).flat();
+    const pend=all.filter(r=>r.dataURL&&!r.synced);
+    let up=0;
+    for(const r of pend){
+      const b64=r.dataURL.split(',')[1];
+      const res=await ghApi(`photos/${r.key}.jpg`,{method:'PUT',body:JSON.stringify({message:`photo ${r.key}`,content:b64,branch:c.branch||'main'})});
+      if(res.ok){
+        r.synced=true;
+        r.url=`https://raw.githubusercontent.com/${c.owner}/${c.repo}/${c.branch||'main'}/photos/${r.key}.jpg`;
+        await phPut(r); up++;
+      }else if(res.status===422){ // 이미 존재
+        r.synced=true; r.url=`https://raw.githubusercontent.com/${c.owner}/${c.repo}/${c.branch||'main'}/photos/${r.key}.jpg`;
+        await phPut(r);
+      }else{
+        const t=await res.text();
+        throw new Error('업로드 실패 '+res.status);
+      }
+    }
+    // 2) 매니페스트 갱신
+    let wm=''; try{wm=localStorage.getItem('daily-workmemo-v1')||'';}catch(e){}
+    let ovr={}; try{ovr=JSON.parse(localStorage.getItem('shift-overrides-v1'))||{};}catch(e){}
+    const manifest={updated:new Date().toISOString(), items:{}, schema, workmemo:wm, overrides:ovr};
+    Object.keys(phMap).forEach(id=>{
+      manifest.items[id]=phMap[id].filter(r=>r.synced||r.url).map(r=>({key:r.key, ts:r.ts}));
+    });
+    let sha=null;
+    const g=await ghApi('photos/manifest.json',{method:'GET'});
+    if(g.ok){ sha=(await g.json()).sha; }
+    const body={message:'update photo manifest', content:btoa(unescape(encodeURIComponent(JSON.stringify(manifest)))), branch:c.branch||'main'};
+    if(sha)body.sha=sha;
+    const mres=await ghApi('photos/manifest.json',{method:'PUT',body:JSON.stringify(body)});
+    if(!mres.ok)throw new Error('매니페스트 실패');
+    ghStatus(`백업 완료 ${up?'· 새 사진 '+up+'장':''} · ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`);
+    if(manual)toast('☁ 깃허브 백업 완료');
+    render();
+  }catch(err){
+    ghStatus('백업 실패: '+err.message+' (토큰·권한 확인)');
+    if(manual)toast('백업 실패 — 연결설정 확인');
+  }
+  ghBusy=false;
+}
+async function ghPull(manual){
+  const c=ghCfg();
+  if(!c.token){ if(manual){toast('먼저 ⚙ 연결설정을 해주세요'); ghConfigSheet();} return; }
+  try{
+    const res=await ghApi('photos/manifest.json',{method:'GET',headers:{'Accept':'application/vnd.github.raw+json'}});
+    if(!res.ok){ if(manual)toast('아직 백업된 사진이 없습니다'); return; }
+    const man=await res.json();
+    let added=0;
+    const have=new Set(Object.values(phMap).flat().map(r=>r.key));
+    Object.keys(man.items||{}).forEach(id=>{
+      (man.items[id]||[]).forEach(m=>{
+        if(!have.has(m.key)){
+          const rec={key:m.key, itemId:id, ts:m.ts, url:`https://raw.githubusercontent.com/${c.owner}/${c.repo}/${c.branch||'main'}/photos/${m.key}.jpg`, synced:true};
+          (phMap[id]=phMap[id]||[]).push(rec);
+          phPut(rec).catch(()=>{});
+          added++;
+        }
+      });
+    });
+    // 체크리스트·메모·근무표 수정 복원
+    let restored=false;
+    if(man.schema&&man.schema.blocks&&man.schema.blocks.length){
+      if(manual){
+        await new Promise(res=>{
+          appConfirm(`백업된 체크리스트(${man.schema.blocks.length}개 블록)를 불러옵니다.\n지금 이 기기의 편집 내용은 덮어씌워집니다.\n진행할까요?`,()=>{
+            schema=man.schema; saveSchema(); restored=true; res();
+          });
+          setTimeout(res,60000);
+        });
+      }
+    }
+    if(man.workmemo!==undefined&&restored){try{localStorage.setItem('daily-workmemo-v1',man.workmemo); const ta=document.getElementById('workMemo'); if(ta)ta.value=man.workmemo;}catch(e){}}
+    if(man.overrides&&restored){try{localStorage.setItem('shift-overrides-v1',JSON.stringify(man.overrides));}catch(e){}}
+    if(added||restored){Object.values(phMap).forEach(l=>l.sort((a,b)=>a.ts-b.ts)); render();}
+    if(manual)toast(restored?`☁ 체크리스트 복원 · 사진 ${added}장`:(added?`☁ 사진 ${added}장 불러옴`:'모두 최신 상태'));
+  }catch(err){ if(manual)toast('불러오기 실패 — 연결설정 확인'); }
+}
+
+phBoot();
+</script>
+</body>
+</html>
