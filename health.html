@@ -474,6 +474,42 @@
   .fs-warn{font-size:11px; color:var(--dim); line-height:1.6; background:var(--raise);
     border-radius:11px; padding:11px 12px;}
 
+  /* ===== 주간 평균 ===== */
+  .wa-card{padding:16px 14px 14px;}
+  .wa-empty{font-size:12.5px; color:var(--dim); line-height:1.7; text-align:center; padding:14px 4px;}
+  .wa-head{display:flex; align-items:flex-start; gap:12px; margin-bottom:12px;}
+  .wa-head > div:first-child{flex:1; min-width:0;}
+  .wa-lbl{font-size:11.5px; font-weight:700; color:var(--muted);}
+  .wa-range{font-family:var(--mono); font-size:10.5px; color:var(--dim); font-weight:600; margin-left:4px;}
+  .wa-val{font-family:var(--mono); font-size:36px; font-weight:800;
+    letter-spacing:-.04em; line-height:1.1; margin-top:4px;}
+  .wa-val small{font-size:14px; font-weight:700; color:var(--muted); margin-left:3px;}
+  .wa-n{font-size:10.5px; color:var(--dim); margin-top:3px;}
+  .wa-diff{flex:none; text-align:right; padding:9px 12px; border-radius:13px;
+    background:var(--raise); transition:transform .35s cubic-bezier(.34,1.56,.64,1);}
+  .wa-diff.pop{transform:scale(1.06);}
+  .wa-diff.dn{background:var(--acc-bg); color:var(--acc);}
+  .wa-diff.up{background:var(--red-bg); color:var(--red);}
+  .wa-diff.eq{color:var(--dim);}
+  .wa-arrow{font-size:13px; font-weight:800; margin-right:2px;}
+  .wa-dnum{font-family:var(--mono); font-size:21px; font-weight:800; letter-spacing:-.02em;}
+  .wa-diff small{font-size:11px; font-weight:700; margin-left:1px;}
+  .wa-sub{display:block; font-size:9.5px; color:var(--dim); font-weight:600; margin-top:2px;}
+  .wa-prev{font-size:11.5px; color:var(--muted); padding:9px 11px; background:var(--raise);
+    border-radius:11px; margin-bottom:14px;}
+  .wa-prev b{font-family:var(--mono); color:var(--text);}
+  .wa-bars{display:flex; align-items:flex-end; gap:5px; height:118px;}
+  .wa-bcol{flex:1; min-width:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-end; height:100%;}
+  .wa-bval{font-family:var(--mono); font-size:9px; color:var(--dim); font-weight:700; margin-bottom:3px;}
+  .wa-bwrap{width:100%; display:flex; align-items:flex-end; justify-content:center; flex:1;}
+  .wa-bar{width:100%; max-width:26px; height:0; border-radius:6px 6px 3px 3px;
+    background:linear-gradient(180deg,#8FD9AC,#30D158);
+    transition:height .7s cubic-bezier(.22,.61,.36,1);}
+  .wa-bar.cur{background:linear-gradient(180deg,#0A84FF,#0A6FD8);
+    box-shadow:0 0 10px rgba(10,132,255,.35);}
+  .wa-bd{font-family:var(--mono); font-size:8.5px; color:var(--dim); margin-top:5px; font-weight:600;}
+
   /* ===== 하단 네비게이션 ===== */
   nav.bottom{position:fixed; left:0; right:0; bottom:0; z-index:50;
     display:flex; justify-content:center; background:rgba(255,255,255,.86);
@@ -522,6 +558,8 @@
     </div>
     <div class="sec-t">단계</div>
     <div class="ladder" id="ladder"></div>
+    <div class="sec-t">주간 평균</div>
+    <div id="weekAvg"></div>
     <div class="sec-t">최근 흐름</div>
     <div class="card">
       <svg class="spark" id="spark" viewBox="0 0 300 130" preserveAspectRatio="none"></svg>
@@ -1241,7 +1279,7 @@ function renderLevel(){
   if(!info){
     document.getElementById('lvNum').textContent='–';
     document.getElementById('lvGoal').innerHTML='⚙에서 시작 체중과 목표 체중을 먼저 넣어주세요.';
-    ld.innerHTML=''; renderSpark(); renderStreak(); renderMonthStats(); return;
+    ld.innerHTML=''; renderWeekAvg(); renderSpark(); renderStreak(); renderMonthStats(); return;
   }
   document.getElementById('lvNum').textContent=info.lv;
   const nextW = info.lv>=LV_MAX ? null : prof.start-(info.lv+1)*info.per;
@@ -1258,7 +1296,7 @@ function renderLevel(){
       ${cur?'<span class="step-tag cur">다음</span>':''}${i===LV_MAX?'<span class="step-tag goal">목표</span>':''}</div>`;
     ld.appendChild(step);
   }
-  renderSpark(); renderStreak(); renderMonthStats();
+  renderWeekAvg(); renderSpark(); renderStreak(); renderMonthStats();
 }
 function renderMonthStats(){
   const el=document.getElementById('monthStats');
@@ -1279,6 +1317,105 @@ function renderMonthStats(){
       delta!=null? (delta<=0?'−':'+')+Math.abs(delta).toFixed(1) : '—'
     }</b><span>체중 변화 kg</span></div>
   </div>`;
+}
+
+/* ===== 주간 평균 =====
+   월요일 시작 기준으로 묶고, 그 주에 기록된 날들의 평균을 낸다.
+   기록이 7일 미만이어도 있는 날만으로 평균을 내되 몇 일치인지 같이 보여준다. */
+function weekKey(dateKey){
+  const d=parseD(dateKey);
+  const dow=(d.getDay()+6)%7;          // 월=0
+  d.setDate(d.getDate()-dow);
+  return dkey(d);
+}
+function weeklyAvgs(){
+  const buck={};
+  sortedW().forEach(r=>{
+    const k=weekKey(r.d);
+    (buck[k]=buck[k]||[]).push(r.w);
+  });
+  return Object.keys(buck).sort().map(k=>({
+    start:k,
+    n:buck[k].length,
+    avg:buck[k].reduce((s,x)=>s+x,0)/buck[k].length,
+  }));
+}
+function renderWeekAvg(){
+  const el=document.getElementById('weekAvg');
+  if(!el) return;
+  const ws=weeklyAvgs();
+  if(!ws.length){
+    el.innerHTML=`<div class="card"><div class="wa-empty">
+      아침 공복 체중을 기록하면 한 주씩 묶어 평균을 내고,<br>지난주와 얼마나 달라졌는지 보여드립니다.</div></div>`;
+    return;
+  }
+  const cur=ws[ws.length-1];
+  const prev=ws.length>1? ws[ws.length-2] : null;
+  const diff=prev? cur.avg-prev.avg : null;
+  const s=parseD(cur.start), e=parseD(cur.start); e.setDate(e.getDate()+6);
+  const range=`${s.getMonth()+1}/${s.getDate()}~${e.getMonth()+1}/${e.getDate()}`;
+
+  // 최근 8주 막대
+  const recent=ws.slice(-8);
+  const vals=recent.map(x=>x.avg);
+  const mn=Math.min(...vals), mx=Math.max(...vals);
+  const span=Math.max(0.4, mx-mn);
+
+  el.innerHTML=`<div class="card wa-card">
+    <div class="wa-head">
+      <div>
+        <div class="wa-lbl">이번 주 평균 <span class="wa-range">${range}</span></div>
+        <div class="wa-val"><span id="waNum">0.0</span><small>kg</small></div>
+        <div class="wa-n">${cur.n}일치 기록${cur.n<7?' · 아직 한 주가 안 찼습니다':''}</div>
+      </div>
+      ${diff!=null?`<div class="wa-diff ${diff<0?'dn':(diff>0?'up':'eq')}" id="waDiff">
+        <span class="wa-arrow">${diff<0?'▼':(diff>0?'▲':'―')}</span>
+        <span class="wa-dnum">0.0</span><small>kg</small>
+        <span class="wa-sub">지난주 대비</span>
+      </div>`:`<div class="wa-diff eq"><span class="wa-sub">다음 주부터<br>비교됩니다</span></div>`}
+    </div>
+    ${prev?`<div class="wa-prev">지난주 평균 <b>${prev.avg.toFixed(1)}kg</b> (${prev.n}일치)</div>`:''}
+    <div class="wa-bars">
+      ${recent.map((x,i)=>{
+        const h=18+((x.avg-mn)/span)*100*0.62;
+        const last=i===recent.length-1;
+        const d2=parseD(x.start);
+        return `<div class="wa-bcol">
+          <span class="wa-bval">${x.avg.toFixed(1)}</span>
+          <div class="wa-bwrap"><div class="wa-bar${last?' cur':''}" data-h="${h.toFixed(1)}"></div></div>
+          <span class="wa-bd">${d2.getMonth()+1}/${d2.getDate()}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="hint" style="margin:10px 2px 0">막대 하나가 한 주 평균입니다.
+      하루 체중은 물·소금·컨디션으로 1~2kg씩 흔들리지만, 주 평균은 그 소음이 걷힙니다.</div>
+  </div>`;
+
+  // --- 애니메이션: 숫자 카운트업 + 막대 차오르기
+  requestAnimationFrame(()=>{
+    el.querySelectorAll('.wa-bar').forEach((b,i)=>{
+      setTimeout(()=>{ b.style.height=b.dataset.h+'px'; }, 60+i*55);
+    });
+  });
+  countUp(el.querySelector('#waNum'), cur.avg, 900);
+  if(diff!=null){
+    const dEl=el.querySelector('#waDiff');
+    countUp(dEl.querySelector('.wa-dnum'), Math.abs(diff), 900);
+    setTimeout(()=>dEl.classList.add('pop'), 500);
+  }
+}
+/* 0에서 목표값까지 부드럽게 올라가는 숫자 */
+function countUp(node, target, dur){
+  if(!node) return;
+  const t0=performance.now();
+  const step=now=>{
+    const p=Math.min(1,(now-t0)/dur);
+    const ease=1-Math.pow(1-p,3);
+    node.textContent=(target*ease).toFixed(1);
+    if(p<1) requestAnimationFrame(step);
+    else node.textContent=target.toFixed(1);
+  };
+  requestAnimationFrame(step);
 }
 
 function renderSpark(){
