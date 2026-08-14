@@ -237,7 +237,7 @@ function load(){
     }catch(e){}
   }
 }
-function save(){try{localStorage.setItem(KEY_ITEMS,JSON.stringify(items));}catch(e){}}
+function save(){try{localStorage.setItem(KEY_ITEMS,JSON.stringify(items));}catch(e){} ghAutoSave();}
 
 /* ===== 다이얼로그 ===== */
 function appConfirm(msg,onYes){
@@ -330,7 +330,11 @@ function toggleSearch(){
 }
 
 /* ===== 렌더 ===== */
-function autoGrow(ta){ta.style.height='auto'; ta.style.height=(ta.scrollHeight+2)+'px';}
+function autoGrow(ta, init){
+  if(init){ta.style.height='auto'; ta.style.height=Math.max(ta.scrollHeight,46)+'px'; return;}
+  // 입력 중: 커질 때만 늘리기 (줄이지 않음 → iOS 키보드 유지)
+  if(ta.scrollHeight>ta.clientHeight) ta.style.height=ta.scrollHeight+'px';
+}
 
 function buildCard(it){
   const card=document.createElement('div');
@@ -354,7 +358,7 @@ function buildCard(it){
 
   const ti=card.querySelector('.c-title');
   const mo=card.querySelector('.c-memo');
-  requestAnimationFrame(()=>{autoGrow(ti); autoGrow(mo);});
+  requestAnimationFrame(()=>{autoGrow(ti,true); autoGrow(mo,true);});
   let t1=null;
   ti.addEventListener('input',()=>{autoGrow(ti); it.title=ti.value; clearTimeout(t1); t1=setTimeout(save,300);});
   let t2=null;
@@ -562,7 +566,12 @@ async function ghApi(path,opts){
     ...opts, headers:{'Authorization':'Bearer '+c.token,'Accept':'application/vnd.github+json',...(opts&&opts.headers||{})}
   });
 }
-let ghBusy=false, ghTimer=null;
+let ghBusy=false, ghTimer=null, ghAutoTimer=null;
+function ghAutoSave(){
+  if(typeof ghCfg!=='function'||!ghCfg().token)return;
+  clearTimeout(ghAutoTimer);
+  ghAutoTimer=setTimeout(()=>ghBackup(false),10000);
+}
 function ghAutoBackupSoon(){clearTimeout(ghTimer); ghTimer=setTimeout(()=>ghBackup(false),2500);}
 async function ghBackup(manual){
   const c=ghCfg();
@@ -593,7 +602,6 @@ async function ghBackup(manual){
     if(!m.ok)throw new Error('매니페스트 실패');
     ghStatus(`백업 완료 ${up?'· 새 사진 '+up+'장 ':''}· ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`);
     if(manual)toast('☁ 백업 완료');
-    render();
   }catch(err){
     ghStatus('백업 실패: '+err.message+' (토큰·권한 확인)');
     if(manual)toast('백업 실패 — 연결설정 확인');
@@ -620,7 +628,7 @@ async function ghPull(manual){
         }
       });
     });
-    if(addI||addP){Object.values(phMap).forEach(l=>l.sort((a,b)=>a.ts-b.ts)); save(); render();}
+    if(addI||addP){Object.values(phMap).forEach(l=>l.sort((a,b)=>a.ts-b.ts)); save();}
     if(manual)toast((addI||addP)?`☁ 메모 ${addI}건 · 사진 ${addP}장 불러옴`:'모두 최신 상태');
   }catch(err){ if(manual)toast('불러오기 실패 — 연결설정 확인'); }
 }

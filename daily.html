@@ -323,14 +323,14 @@ if(!schema.blocks.some(b=>b.id==='bfri'||b.fri)){
     saveSchema();
   }
 }
-function saveSchema(){try{localStorage.setItem(SCHEMA_KEY,JSON.stringify(schema));}catch(e){} if(typeof ghCfg==='function'&&ghCfg().token)ghAutoBackupSoon();}
+function saveSchema(){try{localStorage.setItem(SCHEMA_KEY,JSON.stringify(schema));}catch(e){} ghAutoSave();}
 
 const now=new Date();
 const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 const dow=now.getDay();
 let st={date:today,done:{},steps:{},memos:{},fired:{}};
 try{const p=JSON.parse(localStorage.getItem(STATE_KEY)); if(p&&p.date===today)st=Object.assign(st,p);}catch(e){}
-function saveState(){try{localStorage.setItem(STATE_KEY,JSON.stringify(st));}catch(e){}}
+function saveState(){try{localStorage.setItem(STATE_KEY,JSON.stringify(st));}catch(e){} ghAutoSave();}
 
 let editMode=false, filterIncomplete=false, filterImportant=false;
 // 항목 사진 상태 (본 로직은 하단, 렌더에서 참조하므로 선행 선언)
@@ -1002,7 +1002,12 @@ async function ghApi(path, opts){
   });
   return res;
 }
-let ghBusy=false, ghTimer=null;
+let ghBusy=false, ghTimer=null, ghAutoTimer=null;
+function ghAutoSave(){
+  if(typeof ghCfg!=='function'||!ghCfg().token)return;
+  clearTimeout(ghAutoTimer);
+  ghAutoTimer=setTimeout(()=>ghBackup(false),10000);
+}
 function ghAutoBackupSoon(){clearTimeout(ghTimer); ghTimer=setTimeout(()=>ghBackup(false), 2500);}
 async function ghBackup(manual){
   const c=ghCfg();
