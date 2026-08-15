@@ -31,7 +31,21 @@
   .h-row{display:flex; align-items:center; gap:10px;}
   .h-left{flex:1; min-width:0;}
   .h-title{font-size:17px; font-weight:700;}
-  .h-date{font-family:var(--mono); font-size:11.5px; color:var(--muted); margin-top:2px;}
+  .h-date{font-family:var(--mono); font-size:11.5px; color:var(--muted); margin-top:2px;
+    display:flex; align-items:center; gap:7px; flex-wrap:wrap;}
+  .sync-badge{font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+    font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px;
+    display:inline-flex; align-items:center; gap:4px; line-height:1.4;
+    background:var(--raise); color:var(--muted); border:none;}
+  .sync-badge .sy-dot{width:5px; height:5px; border-radius:50%; background:currentColor;}
+  .sync-badge.ok{background:var(--acc-bg); color:var(--acc);}
+  .sync-badge.pending{background:var(--amber-bg); color:var(--amber);}
+  .sync-badge.saving{background:var(--blue-bg); color:var(--blue);}
+  .sync-badge.err{background:var(--red-bg); color:var(--red);}
+  .sync-badge.off{background:var(--raise); color:var(--dim);}
+  .sy-spin{width:8px; height:8px; border-radius:50%; border:1.5px solid currentColor;
+    border-top-color:transparent; animation:syspin .7s linear infinite;}
+  @keyframes syspin{to{transform:rotate(360deg)}}
   .shift-badge{flex:none; padding:7px 13px; border-radius:11px; text-align:center;
     font-size:15px; font-weight:700; line-height:1.15;}
   .shift-badge .s{display:block; font-size:9.5px; font-weight:600; opacity:.85; margin-top:1px;}
@@ -534,7 +548,7 @@
   <div class="h-row">
     <div class="h-left">
       <div class="h-title">체중관리</div>
-      <div class="h-date" id="dateStr"></div>
+      <div class="h-date"><span id="dateStr"></span><button class="sync-badge" id="syncBadge"></button></div>
     </div>
     <div class="shift-badge" id="shiftBadge"></div>
     <button class="ic-btn" id="setBtn">⚙</button>
@@ -629,10 +643,25 @@
 <script>
 /* ================= 저장소 ================= */
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
-function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){}
-  try{ if(window.storage) window.storage.set(k,v,false); }catch(e){} }
+function lsSet(k,v){
+  let ok=true;
+  try{ localStorage.setItem(k,v); }
+  catch(e){
+    ok=false;
+    // 저장 공간이 꽉 찼는데 조용히 넘어가면 기록이 사라진 걸 모른다
+    try{ toast('기기 저장 실패 — 백업으로 보관됩니다'); }catch(e2){}
+  }
+  try{ if(window.storage) window.storage.set(k,v,false); }catch(e){}
+  return ok;
+}
 function jGet(k,d){ try{ const r=lsGet(k); return r?JSON.parse(r):d; }catch(e){ return d; } }
-function jSet(k,v){ lsSet(k,JSON.stringify(v)); }
+/* 저장되는 모든 데이터는 자동으로 백업 대기열에 올린다.
+   개별 호출 지점마다 백업을 거는 방식은 빠뜨리기 쉬워서, 저장 함수에서 한 번에 처리. */
+const NO_BACKUP_KEYS=['wl-gh-last','wl-photo-synced','gh-sync-v1','app-theme'];
+function jSet(k,v){
+  lsSet(k,JSON.stringify(v));
+  if(!NO_BACKUP_KEYS.includes(k) && typeof ghAutoBackupSoon==='function') ghAutoBackupSoon();
+}
 
 const K_PROF='wl-profile', K_LOG='wl-log', K_TASK='wl-task', K_MEAL='wl-meal';
 let prof = jGet(K_PROF, {start:null, goal:null});
@@ -895,6 +924,7 @@ document.getElementById('photoIn').addEventListener('change', async e=>{
 /* ================= 헤더 ================= */
 function renderHead(){
   document.getElementById('dateStr').textContent=`${now.getMonth()+1}/${now.getDate()} (${DAYS[now.getDay()]})`;
+  ghRefreshBadge();
   const sh=SHIFTS[shiftIdx(now)];
   const b=document.getElementById('shiftBadge');
   b.className='shift-badge '+sh.c;
@@ -1755,12 +1785,13 @@ function openLightbox(mediaList, start){
 }
 
 /* 고정된 카드가 항상 위로 */
+/* 정렬만 한다. 화면을 그릴 때마다 저장하면, 읽기에 실패한 빈 상태가
+   그대로 저장소에 덮어써져 데이터가 사라진다. 저장은 실제 변경 시에만. */
 function mvSort(){
   motiv.sort((a,b)=>{
     if(!!a.pin!==!!b.pin) return a.pin? -1 : 1;
     return 0;
   });
-  jSet('wl-motiv',motiv);
 }
 
 /* 꾹 누르면 카드를 집어서 위아래로 옮긴다 */
@@ -1854,7 +1885,7 @@ function renderMotiv(){
       t=setTimeout(()=>{jSet('wl-motiv',motiv); ghAutoBackupSoon();},350);
     });
     body.querySelector('.pin').onclick=()=>{
-      v.pin=!v.pin; jSet('wl-motiv',motiv); mvSort(); renderMotiv(); ghAutoBackupSoon();
+      v.pin=!v.pin; mvSort(); jSet('wl-motiv',motiv); renderMotiv(); ghAutoBackupSoon();
       toast(v.pin?'상단 고정':'고정 해제');
     };
     body.querySelector('.add').onclick=()=>{ mvTarget=v; document.getElementById('mvIn').click(); };
@@ -2015,14 +2046,81 @@ function toBase64(val){
     r.readAsDataURL(val);
   });
 }
-function ghAutoBackupSoon(){
-  if(!ghCfg().token) return;
-  clearTimeout(ghTimer); ghTimer=setTimeout(()=>ghBackup(false),2500);
+/* ===== 백업 상태 표시 =====
+   저장할 게 남았는지 / 올라갔는지를 항상 화면에 띄운다.
+   조용히 실패해서 데이터가 안 올라가 있는 상황을 없애기 위함. */
+let ghPending=false, ghFail=0, ghLastOk=jGet('wl-gh-last',null);
+function ghBadge(state, note){
+  const el=document.getElementById('syncBadge');
+  if(!el) return;
+  if(!ghCfg().token){
+    el.className='sync-badge off';
+    el.innerHTML='<span class="sy-dot"></span>백업 미연동';
+    return;
+  }
+  const map={
+    saving:['saving','<span class="sy-spin"></span>저장 중'],
+    ok:['ok','<span class="sy-dot"></span>'+(note||'저장됨')],
+    pending:['pending','<span class="sy-dot"></span>저장 대기'],
+    err:['err','<span class="sy-dot"></span>'+(note||'저장 실패 — 눌러서 재시도')],
+  };
+  const [cls,html]=map[state]||map.ok;
+  el.className='sync-badge '+cls;
+  el.innerHTML=html;
 }
+function ghAgo(){
+  if(!ghLastOk) return '';
+  const m=Math.floor((Date.now()-ghLastOk)/60000);
+  if(m<1) return '방금 저장됨';
+  if(m<60) return m+'분 전 저장됨';
+  const h=Math.floor(m/60);
+  if(h<24) return h+'시간 전 저장됨';
+  return Math.floor(h/24)+'일 전 저장됨';
+}
+function ghRefreshBadge(){
+  if(ghBusy) return ghBadge('saving');
+  if(ghFail)  return ghBadge('err');
+  if(ghPending) return ghBadge('pending');
+  ghBadge('ok', ghAgo());
+}
+function ghAutoBackupSoon(){
+  if(!ghCfg().token){ ghBadge('off'); return; }
+  ghPending=true; ghRefreshBadge();
+  clearTimeout(ghTimer); ghTimer=setTimeout(()=>ghBackup(false),1200);
+}
+// 네트워크가 돌아오거나 앱으로 되돌아오면 밀린 저장을 마저 올린다
+window.addEventListener('online',()=>{ if(ghPending||ghFail) ghBackup(false); });
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && (ghPending||ghFail)) ghBackup(false);
+});
+window.addEventListener('beforeunload',e=>{
+  if(ghPending||ghFail){ e.preventDefault(); e.returnValue=''; }
+});
 async function ghBackup(manual){
   const c=ghCfg();
   if(!c.token){ if(manual){ toast('먼저 깃허브 연동을 설정하세요'); ghConfigSheet(); } return; }
-  if(ghBusy) return; ghBusy=true; ghStatusText('백업 중...');
+  if(ghBusy) return;
+  // 안전장치: 기기 데이터가 비었는데 서버에는 기록이 있으면 덮어쓰지 않는다.
+  // (저장소가 초기화된 상태에서 자동 백업이 돌면 서버 백업까지 날아간다)
+  const localCount = Object.keys(log).length + meals.length + motiv.length + fastHist.length;
+  if(localCount===0){
+    try{
+      const chk=await ghApi('health/data.json',{method:'GET',
+        headers:{'Accept':'application/vnd.github.raw+json'}});
+      if(chk.ok){
+        const man=await chk.json();
+        const remoteCount=Object.keys(man.log||{}).length+(man.meals||[]).length
+                        +(man.motiv||[]).length+(man.fastHist||[]).length;
+        if(remoteCount>0){
+          ghStatusText('기기 데이터가 비어 있어 백업을 멈췄습니다 — 서버 기록 보존됨');
+          ghPending=false; ghBadge('err','기기 데이터 비어있음 — 보호됨');
+          if(manual) toast('서버에 기록이 있어 덮어쓰지 않았습니다');
+          return;
+        }
+      }
+    }catch(e){ /* 확인 실패 시엔 그냥 진행 */ }
+  }
+  ghBusy=true; ghStatusText('백업 중...'); ghBadge('saving');
   try{
     let up=0;
     // 업로드 대상: 식단 사진 + 동기부여 카드의 사진·영상 전부
@@ -2057,12 +2155,21 @@ async function ghBackup(manual){
     const r=await ghApi('health/data.json',{method:'PUT', body:JSON.stringify(body)});
     if(!r.ok) throw new Error('데이터 저장 실패 '+r.status);
     ghStatusText(`백업 완료 · ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`);
+    ghPending=false; ghFail=0;
+    ghLastOk=Date.now(); jSet('wl-gh-last',ghLastOk);
     if(manual) toast('☁️ 깃허브 백업 완료');
   }catch(err){
     ghStatusText('백업 실패: '+err.message+' (토큰 권한 확인)');
+    ghFail++;
     if(manual) toast('백업 실패 — 깃허브 설정 확인');
+    // 조용히 포기하지 않는다: 점점 간격을 늘려가며 다시 시도
+    if(ghFail<=5){
+      clearTimeout(ghTimer);
+      ghTimer=setTimeout(()=>{ ghBusy=false; ghBackup(false); }, Math.min(60000, 3000*Math.pow(2,ghFail-1)));
+    }
   }
   ghBusy=false;
+  ghRefreshBadge();
 }
 async function ghPull(manual){
   const c=ghCfg();
@@ -2511,6 +2618,10 @@ function calcSheet(){
 }
 
 /* ================= 설정 ================= */
+document.getElementById('syncBadge').onclick=()=>{
+  if(!ghCfg().token){ ghConfigSheet(); return; }
+  ghFail=0; ghBusy=false; ghBackup(true);
+};
 document.getElementById('setBtn').onclick=()=>{
   const ov=document.createElement('div'); ov.className='ov';
   ov.innerHTML=`<div class="dlg">
