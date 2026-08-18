@@ -56,6 +56,7 @@
     <button class="ttab" id="tab-patrol" onclick="show('patrol')"><span class="ic">🏢</span>순찰</button>
     <button class="ttab" id="tab-cal" onclick="show('cal')"><span class="ic">📅</span>근무표</button>
     <button class="ttab" id="tab-memo" onclick="show('memo')"><span class="ic">📝</span>메모장</button>
+    <button class="ttab" id="tab-study" onclick="show('study')"><span class="ic">🎓</span>자격증</button>
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌓</button>
   </div>
   <div class="frames">
@@ -63,12 +64,13 @@
     <iframe id="fr-patrol"></iframe>
     <iframe id="fr-cal"></iframe>
     <iframe id="fr-memo"></iframe>
+    <iframe id="fr-study"></iframe>
   </div>
 </div>
 <script>
 const LAST_KEY="unified-last-tab-v7";
-const KEYS=["daily","patrol","cal","memo"];
-const SRC={daily:"daily.html",patrol:"patrol.html",cal:"calendar.html",memo:"memo.html"};
+const KEYS=["daily","patrol","cal","memo","study"];
+const SRC={daily:"daily.html",patrol:"patrol.html",cal:"calendar.html",memo:"memo.html",study:"study.html"};
 const loaded={daily:true};
 function show(which){
   if(!KEYS.includes(which)) which="daily";
