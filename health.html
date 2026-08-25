@@ -481,18 +481,53 @@
   .lv-seg button b{display:block; font-size:13px; font-weight:800;}
   .lv-seg button span{display:block; font-size:9.5px; margin-top:1px; opacity:.8;}
   /* 공복 기록 리스트 */
-  .fh-list{display:flex; flex-direction:column; gap:9px;}
-  .fh-row{display:flex; align-items:center; gap:10px;}
-  .fh-d{flex:none; width:36px; font-family:var(--mono); font-size:10.5px;
+  /* ===== 공복 기록 인포그래픽 ===== */
+  .fx-card{padding:16px 14px 14px;}
+  .fx-hero{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+  .fx-big{font-size:38px; line-height:1;}
+  .fx-hero-tx{flex:1; min-width:0;}
+  .fx-lbl{font-size:11px; font-weight:700; color:var(--muted);}
+  .fx-num{font-family:var(--mono); font-size:32px; font-weight:800;
+    letter-spacing:-.04em; line-height:1.1;}
+  .fx-num small{font-size:13px; font-weight:700; color:var(--muted); margin-left:3px;}
+  .fx-streak{flex:none; text-align:center; background:var(--raise);
+    border-radius:13px; padding:9px 12px; min-width:70px;}
+  .fx-streak.on{background:var(--amber-bg);}
+  .fx-streak span{font-size:16px; line-height:1;}
+  .fx-streak b{display:block; font-family:var(--mono); font-size:20px;
+    font-weight:800; line-height:1.2; color:var(--dim);}
+  .fx-streak.on b{color:var(--amber);}
+  .fx-streak em{display:block; font-style:normal; font-size:8.5px;
+    font-weight:700; color:var(--muted);}
+  .fx-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:14px;}
+  .fx-stats > div{background:var(--raise); border-radius:12px; padding:10px 3px; text-align:center;}
+  .fx-stats b{display:block; font-family:var(--mono); font-size:17px; font-weight:800;}
+  .fx-stats span{display:block; font-size:9.5px; color:var(--muted); margin-top:3px; font-weight:600;}
+  .fx-rows{display:flex; flex-direction:column;}
+  .fx-row{display:flex; align-items:center; gap:8px; padding-top:11px;}
+  .fx-ic{font-size:16px; flex:none; width:20px; text-align:center;}
+  .fx-d{flex:none; width:32px; font-family:var(--mono); font-size:10.5px;
     font-weight:700; color:var(--dim);}
-  .fh-mid{flex:1; min-width:0;}
-  .fh-bar{height:7px; border-radius:5px; background:var(--raise); overflow:hidden;}
-  .fh-fill{height:100%; background:var(--amber); border-radius:5px;}
-  .fh-fill.ok{background:var(--acc);}
-  .fh-t{font-family:var(--mono); font-size:9.5px; color:var(--dim); margin-top:4px;}
-  .fh-h{flex:none; font-family:var(--mono); font-size:13px; font-weight:800; color:var(--amber);}
-  .fh-h.ok{color:var(--acc);}
-  .fh-h span{font-size:9.5px; color:var(--dim); font-weight:600;}
+  .fx-track{flex:1; height:9px; border-radius:6px; background:var(--raise); overflow:hidden;}
+  .fx-fill{height:100%; border-radius:6px; transition:width .8s cubic-bezier(.22,.61,.36,1);}
+  .fx-fill.gold{background:linear-gradient(90deg,#FFB340,#F09000);}
+  .fx-fill.purple{background:linear-gradient(90deg,#B18CFF,#7B4DFF);}
+  .fx-fill.green{background:linear-gradient(90deg,#5CD98A,#24BE5C);}
+  .fx-fill.lime{background:linear-gradient(90deg,#B8E986,#8BC34A);}
+  .fx-fill.gray{background:var(--dim);}
+  .fx-h{flex:none; width:44px; text-align:right; font-family:var(--mono);
+    font-size:13.5px; font-weight:800;}
+  .fx-h em{font-style:normal; font-size:9.5px; color:var(--dim); font-weight:600;}
+  .fx-h.gold{color:var(--amber);} .fx-h.purple{color:#7B4DFF;}
+  .fx-h.green{color:var(--acc);} .fx-h.lime{color:#7CB342;} .fx-h.gray{color:var(--dim);}
+  .fx-blocks{display:flex; align-items:center; gap:7px; padding:4px 0 9px 28px;
+    font-size:10px; letter-spacing:1px; border-bottom:.5px solid var(--border);}
+  .fx-rows > .fx-blocks:last-child{border-bottom:none;}
+  .fx-time{font-family:var(--mono); font-size:9.5px; color:var(--dim);
+    letter-spacing:0; margin-left:auto;}
+  .fx-legend{display:flex; flex-wrap:wrap; gap:9px; margin-top:12px;
+    padding-top:11px; border-top:.5px solid var(--border);
+    font-size:10px; color:var(--muted); font-weight:600;}
   .fh-more{margin-top:11px; font-size:10.5px; color:var(--dim); text-align:center;}
   .fast-stage{background:var(--raise); border-radius:12px; padding:12px 13px; margin-bottom:12px;}
   .fs-now{font-size:12.5px; font-weight:800; color:var(--blue); margin-bottom:5px;}
@@ -635,11 +670,11 @@
 
 <main>
   <div class="page on" id="p-today">
-    <div id="macroCard"></div>
+    <div id="fastHist"></div>
     <div id="fastCard"></div>
+    <div id="macroCard"></div>
     <div id="todayEditor"></div>
     <div id="sleepCard"></div>
-    <div id="fastHist"></div>
   </div>
 
   <div class="page" id="p-level">
@@ -2523,38 +2558,86 @@ function renderFastCard(){
 }
 
 /* 공복 기록이 쌓이는 곳 */
+/* 공복 기록 — 이모지 게이지로 한눈에 보이게.
+   한 칸이 4시간. 12/16/18/24시간 구간마다 표시가 달라진다. */
+const FAST_ICONS=[
+  {h:24, ic:'🔥', label:'24h+', tone:'gold'},
+  {h:18, ic:'💪', label:'18h+', tone:'purple'},
+  {h:16, ic:'✅', label:'16h+', tone:'green'},
+  {h:12, ic:'🌱', label:'12h+', tone:'lime'},
+  {h:0,  ic:'🕐', label:'12h-', tone:'gray'},
+];
+function fastIcon(h){ return FAST_ICONS.find(x=>h>=x.h)||FAST_ICONS[FAST_ICONS.length-1]; }
+function fastBlocks(h){
+  const full=Math.min(6, Math.floor(h/4));
+  return '🟩'.repeat(full) + '⬜'.repeat(Math.max(0,6-full));
+}
 function renderFastHist(){
   const el=document.getElementById('fastHist');
   if(!el) return;
   if(!fastHist.length){ el.innerHTML=''; return; }
+
   const best=Math.max(...fastHist.map(f=>f.hours));
   const avg=fastHist.reduce((s,f)=>s+f.hours,0)/fastHist.length;
+  const done16=fastHist.filter(f=>f.hours>=16).length;
+  const rate=Math.round(done16/fastHist.length*100);
+
+  // 연속 성공(16h+) 일수
+  let streak=0;
+  for(const f of fastHist){ if(f.hours>=16) streak++; else break; }
+
+  const recent=fastHist.slice(0,7);
+  const mx=Math.max(24, ...recent.map(f=>f.hours));
+
   el.innerHTML=`
     <div class="sec-t">공복 기록</div>
-    <div class="card">
-      <div class="ms-grid" style="margin-bottom:12px">
-        <div><b>${fastHist.length}</b><span>총 횟수</span></div>
-        <div><b>${best.toFixed(1)}</b><span>최장 시간</span></div>
-        <div><b>${avg.toFixed(1)}</b><span>평균 시간</span></div>
+    <div class="card fx-card">
+      <div class="fx-hero">
+        <div class="fx-big">${fastIcon(best).ic}</div>
+        <div class="fx-hero-tx">
+          <div class="fx-lbl">최장 공복</div>
+          <div class="fx-num">${best.toFixed(1)}<small>시간</small></div>
+        </div>
+        <div class="fx-streak ${streak?'on':''}">
+          <span>${streak?'🔥':'💤'}</span>
+          <b>${streak}</b><em>연속 16h+</em>
+        </div>
       </div>
-      <div class="fh-list">
-        ${fastHist.slice(0,10).map(f=>{
-          // 16시간을 넘겼는지로만 표시(목표 개념이 없어짐)
-          const ok=f.hours>=16;
-          const pct=Math.min(100, Math.round(f.hours/24*100));
+
+      <div class="fx-stats">
+        <div><b>${fastHist.length}</b><span>총 횟수</span></div>
+        <div><b>${avg.toFixed(1)}h</b><span>평균</span></div>
+        <div><b>${rate}%</b><span>16h 달성률</span></div>
+      </div>
+
+      <div class="fx-rows">
+        ${recent.map(f=>{
+          const ic=fastIcon(f.hours);
+          const pct=Math.min(100, f.hours/mx*100);
           const st=new Date(f.start), en=new Date(f.end);
-          return `<div class="fh-row">
-            <div class="fh-d">${shortD(f.d)}</div>
-            <div class="fh-mid">
-              <div class="fh-bar"><div class="fh-fill${ok?' ok':''}" style="width:${pct}%"></div></div>
-              <div class="fh-t">${p2(st.getHours())}:${p2(st.getMinutes())} → ${p2(en.getHours())}:${p2(en.getMinutes())}</div>
-            </div>
-            <div class="fh-h${ok?' ok':''}">${f.hours.toFixed(1)}<span>h</span></div>
+          return `<div class="fx-row">
+            <span class="fx-ic">${ic.ic}</span>
+            <span class="fx-d">${shortD(f.d)}</span>
+            <div class="fx-track"><div class="fx-fill ${ic.tone}" style="width:0" data-w="${pct.toFixed(0)}"></div></div>
+            <span class="fx-h ${ic.tone}">${f.hours.toFixed(1)}<em>h</em></span>
+          </div>
+          <div class="fx-blocks">${fastBlocks(f.hours)}
+            <span class="fx-time">${p2(st.getHours())}:${p2(st.getMinutes())} → ${p2(en.getHours())}:${p2(en.getMinutes())}</span>
           </div>`;
         }).join('')}
       </div>
-      ${fastHist.length>10?`<div class="fh-more">최근 10개만 표시 · 전체 ${fastHist.length}개</div>`:''}
+
+      <div class="fx-legend">
+        ${FAST_ICONS.slice().reverse().map(x=>`<span>${x.ic}${x.label}</span>`).join('')}
+      </div>
+      ${fastHist.length>7?`<div class="fh-more">최근 7개 표시 · 전체 ${fastHist.length}개</div>`:''}
     </div>`;
+
+  // 막대가 차오르는 애니메이션
+  requestAnimationFrame(()=>{
+    el.querySelectorAll('.fx-fill').forEach((b,i)=>
+      setTimeout(()=>{ b.style.width=b.dataset.w+'%'; }, 60+i*70));
+  });
 }
 
 /* ================= 수면 기록 =================
