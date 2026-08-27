@@ -2354,25 +2354,15 @@ async function ghBackup(manual){
   const c=ghCfg();
   if(!c.token){ if(manual){ toast('먼저 깃허브 연동을 설정하세요'); ghConfigSheet(); } return; }
   if(ghBusy) return;
-  // 안전장치: 기기 데이터가 비었는데 서버에는 기록이 있으면 덮어쓰지 않는다.
-  // (저장소가 초기화된 상태에서 자동 백업이 돌면 서버 백업까지 날아간다)
+  // 안전장치: 자동 백업(수동이 아닌 경우)은 기기 데이터가 완전히 비어 있으면
+  // 절대 올리지 않는다. 서버에 물어보고 판단하는 방식은 네트워크 왕복 사이에
+  // 레이스가 생길 수 있어서, "자동이면 무조건 차단"으로 단순화했다.
+  // 정말 비우고 싶으면 설정에서 수동으로 "지금 백업"을 눌러야 한다.
   const localCount = Object.keys(log).length + meals.length + motiv.length + fastHist.length + sleeps.length + chHist.length;
-  if(localCount===0){
-    try{
-      const chk=await ghApi('health/data.json',{method:'GET',
-        headers:{'Accept':'application/vnd.github.raw+json'}});
-      if(chk.ok){
-        const man=await chk.json();
-        const remoteCount=Object.keys(man.log||{}).length+(man.meals||[]).length
-                        +(man.motiv||[]).length+(man.fastHist||[]).length+(man.sleeps||[]).length+(man.chHist||[]).length;
-        if(remoteCount>0){
-          ghStatusText('기기 데이터가 비어 있어 백업을 멈췄습니다 — 서버 기록 보존됨');
-          ghPending=false; ghBadge('err','기기 데이터 비어있음 — 보호됨');
-          if(manual) toast('서버에 기록이 있어 덮어쓰지 않았습니다');
-          return;
-        }
-      }
-    }catch(e){ /* 확인 실패 시엔 그냥 진행 */ }
+  if(!manual && localCount===0){
+    ghStatusText('기기 데이터가 비어 있어 자동 백업을 건너뜁니다');
+    ghPending=false; ghBadge('err','기기 데이터 비어있음 — 자동백업 안 함');
+    return;
   }
   ghBusy=true; ghStatusText('백업 중...'); ghBadge('saving');
   try{
