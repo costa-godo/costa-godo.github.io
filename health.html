@@ -439,6 +439,60 @@
     transition:.2s; z-index:400; white-space:nowrap;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
+  /* ===== 도전 ===== */
+  .ch-card{padding:16px 15px 15px;}
+  .ch-head{display:flex; align-items:center; margin-bottom:11px;}
+  .ch-t{flex:1; font-size:14.5px; font-weight:800;}
+  .ch-t b{font-family:var(--mono); color:var(--blue);}
+  .ch-fail{font-size:11.5px; font-weight:800; color:var(--red);
+    background:var(--red-bg); padding:6px 13px; border-radius:20px;}
+  .ch-idle{font-size:12.5px; color:var(--muted); line-height:1.6; margin-bottom:13px;}
+  .ch-opts{display:grid; grid-template-columns:repeat(3,1fr); gap:7px;}
+  .ch-opts button{padding:12px 3px; border-radius:12px; background:var(--raise);
+    border:1.5px solid transparent; text-align:center;}
+  .ch-opts button:active{transform:scale(.96);}
+  .ch-opts button b{display:block; font-family:var(--mono); font-size:16px; font-weight:800;}
+  .ch-opts button span{display:block; font-size:8.5px; color:var(--muted);
+    font-weight:700; margin-top:3px; line-height:1.3;}
+  .ch-hist{display:flex; flex-wrap:wrap; gap:5px; margin-top:12px;
+    padding-top:11px; border-top:.5px solid var(--border);}
+  .ch-badge{font-size:10px; font-weight:800; padding:3px 8px; border-radius:20px;
+    background:var(--raise); color:var(--muted);}
+  .ch-badge.success{background:var(--acc-bg); color:var(--acc);}
+  .ch-badge.fail{background:var(--red-bg); color:var(--red);}
+
+  .ch-track{position:relative; height:30px; display:flex; align-items:center;
+    gap:7px; margin-bottom:6px;}
+  .ch-flag{font-size:15px; flex:none; z-index:1;}
+  .ch-line{flex:1; height:6px; border-radius:4px; background:var(--raise); overflow:hidden;}
+  .ch-line-fill{height:100%; width:0; background:linear-gradient(90deg,#7FD3A0,#24BE5C);
+    border-radius:4px; transition:width .9s linear;}
+  .ch-runner{position:absolute; left:0; top:50%; transform:translateY(calc(-50% - 13px));
+    font-size:20px; transition:left .9s linear; animation:chBounce .5s ease-in-out infinite;}
+  @keyframes chBounce{0%,100%{transform:translateY(calc(-50% - 13px));} 50%{transform:translateY(calc(-50% - 18px));}}
+  .ch-pct{text-align:right; font-family:var(--mono); font-size:11px; font-weight:700;
+    color:var(--dim); margin-bottom:14px;}
+
+  .ch-tower{display:flex; flex-direction:column-reverse; gap:4px; margin-bottom:10px;}
+  .ch-block{height:15px; border-radius:5px; background:var(--raise);
+    border:1px solid var(--border); position:relative; overflow:hidden;}
+  .ch-block::after{content:''; position:absolute; left:0; right:0; bottom:0;
+    height:var(--fh,0%); background:linear-gradient(180deg,#8FD9AC,#24BE5C);
+    transition:height .6s cubic-bezier(.22,.61,.36,1); border-radius:4px;}
+  .ch-block.fill{border-color:transparent;}
+  .ch-block.pop::after{animation:chPop .45s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes chPop{0%{filter:brightness(1.9);} 100%{filter:brightness(1);}}
+  .ch-sub{text-align:center; font-size:11px; color:var(--muted); font-weight:600;}
+
+  .ch-card.done{text-align:center; padding:26px 15px;}
+  .ch-cele{font-size:44px; animation:chCele .6s ease;}
+  @keyframes chCele{0%{transform:scale(.3) rotate(-15deg); opacity:0;}
+    60%{transform:scale(1.15) rotate(8deg); opacity:1;} 100%{transform:scale(1) rotate(0);}}
+  .ch-done-t{font-size:17px; font-weight:800; margin-top:8px;}
+  .ch-done-s{font-size:12px; color:var(--muted); margin-top:4px;}
+  .ch-again{margin-top:16px; padding:12px 22px; border-radius:12px;
+    background:var(--acc); color:#fff; font-size:13.5px; font-weight:800;}
+
   /* ===== 공복 타이머 ===== */
   .fast-card{padding:16px;}
   .fast-top{display:flex; align-items:center; margin-bottom:12px;}
@@ -670,6 +724,7 @@
 
 <main>
   <div class="page on" id="p-today">
+    <div id="chCard"></div>
     <div id="fastHist"></div>
     <div id="fastCard"></div>
     <div id="macroCard"></div>
@@ -2301,7 +2356,7 @@ async function ghBackup(manual){
   if(ghBusy) return;
   // 안전장치: 기기 데이터가 비었는데 서버에는 기록이 있으면 덮어쓰지 않는다.
   // (저장소가 초기화된 상태에서 자동 백업이 돌면 서버 백업까지 날아간다)
-  const localCount = Object.keys(log).length + meals.length + motiv.length + fastHist.length + sleeps.length;
+  const localCount = Object.keys(log).length + meals.length + motiv.length + fastHist.length + sleeps.length + chHist.length;
   if(localCount===0){
     try{
       const chk=await ghApi('health/data.json',{method:'GET',
@@ -2309,7 +2364,7 @@ async function ghBackup(manual){
       if(chk.ok){
         const man=await chk.json();
         const remoteCount=Object.keys(man.log||{}).length+(man.meals||[]).length
-                        +(man.motiv||[]).length+(man.fastHist||[]).length+(man.sleeps||[]).length;
+                        +(man.motiv||[]).length+(man.fastHist||[]).length+(man.sleeps||[]).length+(man.chHist||[]).length;
         if(remoteCount>0){
           ghStatusText('기기 데이터가 비어 있어 백업을 멈췄습니다 — 서버 기록 보존됨');
           ghPending=false; ghBadge('err','기기 데이터 비어있음 — 보호됨');
@@ -2342,7 +2397,7 @@ async function ghBackup(manual){
     }
     if(up){ jSet(K_MEAL,meals); jSet('wl-motiv',motiv); }
     saveSynced();
-    const manifest={updated:new Date().toISOString(), prof, log, tasks, fastHist, sleeps,
+    const manifest={updated:new Date().toISOString(), prof, log, tasks, fastHist, sleeps, challenge, chHist,
       meals:meals.map(m=>({id:m.id,d:m.d,slot:m.slot,memo:m.memo,key:m.key||null,url:m.url||null,nut:m.nut||null,rawPaste:m.rawPaste||null,fasted:!!m.fasted})),
       motiv:motiv.map(v=>({id:v.id,d:v.d,note:v.note||'',url:v.url||'',
         media:mvMedia(v).map(md=>({key:md.key,type:md.type,remote:md.remote||null}))}))};
@@ -2378,7 +2433,7 @@ async function ghPull(manual){
     if(!res.ok){ if(manual) toast('저장된 백업이 없습니다'); return; }
     const man=await res.json();
     const remoteCount=Object.keys(man.log||{}).length+(man.meals||[]).length
-                     +(man.motiv||[]).length+(man.fastHist||[]).length+(man.sleeps||[]).length;
+                     +(man.motiv||[]).length+(man.fastHist||[]).length+(man.sleeps||[]).length+(man.chHist||[]).length;
     if(remoteCount===0){
       // 서버 백업이 비어 있으면 "최신"이 아니라 문제 상황이다
       ghStatusText('서버 백업이 비어 있습니다 — 불러올 기록이 없습니다');
@@ -2415,10 +2470,181 @@ async function ghPull(manual){
     const haveS=new Set(sleeps.map(x=>x.d));
     (man.sleeps||[]).forEach(x=>{ if(!haveS.has(x.d)){ sleeps.push(x); added++; } });
     sleeps.sort((a,b)=>a.d<b.d?1:-1); jSet('wl-sleep',sleeps);
+    // 진행 중인 도전이 이 기기에 없으면 서버 것을 이어받는다(다른 기기에서 시작한 경우)
+    if(!challenge && man.challenge){ challenge=man.challenge; jSet('wl-challenge',challenge); added++; }
+    const haveCh=new Set(chHist.map(x=>x.start));
+    (man.chHist||[]).forEach(x=>{ if(!haveCh.has(x.start)){ chHist.push(x); added++; } });
+    chHist.sort((a,b)=>b.start-a.start); jSet('wl-challenge-hist',chHist);
     if(manual) toast(added? `⬇ ${added}개 불러옴` : '기기 기록이 이미 서버와 같습니다');
     // 방금 서버에서 받아온 내용이므로 되쓰기(백업)를 걸지 않는다
     onDataChanged({backup:false});
   }catch(err){ if(manual) toast('불러오기 실패 — 깃허브 설정 확인'); }
+}
+
+/* ================= 도전 =================
+   1/3/5/14/21/40일 중 골라 시작하면 그 순간부터 24시간마다 자동으로 하루가 채워진다.
+   달력 날짜가 아니라 "시작 시각으로부터 몇 시간 지났나"로 계산하므로
+   앱을 껐다 켜도, 자정을 넘겨도 그대로 이어진다. */
+const CH_OPTS=[
+  {d:1,  tag:'가볍게 시작'},
+  {d:3,  tag:'작심삼일 넘기기'},
+  {d:5,  tag:'평일 완주'},
+  {d:14, tag:'2주 습관'},
+  {d:21, tag:'습관의 벽'},
+  {d:40, tag:'완전 정착'},
+];
+const CH_DAY_MS=24*3600*1000;
+const CH_TOWER_MAX=14;   // 탑 칸 수 상한 — 40일이어도 14칸으로 압축해서 보여준다
+let challenge=jGet('wl-challenge', null);      // {days, start}
+let chHist=jGet('wl-challenge-hist', []);      // [{days, start, end, result, completedDays}]
+let chTimer=null, chLastBlock=-1;
+
+function chElapsedMs(){ return challenge? Math.max(0, Date.now()-challenge.start) : 0; }
+function chTotalMs(){ return challenge? challenge.days*CH_DAY_MS : 0; }
+function chCompletedDays(){ return Math.min(challenge?challenge.days:0, Math.floor(chElapsedMs()/CH_DAY_MS)); }
+
+function chStart(days){
+  challenge={days, start:Date.now()};
+  chLastBlock=-1;
+  jSet('wl-challenge', challenge);
+  toast(`${days}일 도전 시작 🔥`);
+  renderChallenge();
+}
+
+function chFinishSuccess(){
+  chHist.unshift({days:challenge.days, start:challenge.start, end:Date.now(),
+    result:'success', completedDays:challenge.days});
+  chHist=chHist.slice(0,40);
+  jSet('wl-challenge-hist', chHist);
+  challenge=null; jSet('wl-challenge', null);
+}
+
+function chFail(){
+  if(!challenge) return;
+  const done=chCompletedDays();
+  ask(`${done}일째입니다. 지금 실패로 기록할까요?\n탑이 무너집니다.`, ()=>{
+    chHist.unshift({days:challenge.days, start:challenge.start, end:Date.now(),
+      result:'fail', completedDays:done});
+    chHist=chHist.slice(0,40);
+    jSet('wl-challenge-hist', chHist);
+    chPlayCollapse(()=>{
+      challenge=null; jSet('wl-challenge', null);
+      renderChallenge();
+    });
+  });
+}
+
+/* 탑이 와르르 무너지는 연출 — 블록마다 제각각 흔들리며 떨어진다 */
+function chPlayCollapse(done){
+  const tower=document.getElementById('chTower');
+  if(!tower){ done(); return; }
+  const blocks=[...tower.children];
+  blocks.forEach((b,i)=>{
+    const dx=(Math.random()*2-1)*40, rot=(Math.random()*2-1)*50;
+    b.style.transition=`transform .6s cubic-bezier(.5,0,.9,1) ${i*25}ms, opacity .5s ease ${i*25}ms`;
+    b.style.transform=`translate(${dx}px, 160px) rotate(${rot}deg)`;
+    b.style.opacity='0';
+  });
+  setTimeout(done, blocks.length*25+650);
+}
+
+function chHistBadges(){
+  if(!chHist.length) return '';
+  return `<div class="ch-hist">${chHist.slice(0,10).map(h=>
+    `<span class="ch-badge ${h.result}" title="${h.days}일 도전 · ${h.completedDays}/${h.days}">
+      ${h.result==='success'?'✅':'❌'}${h.days}</span>`).join('')}</div>`;
+}
+
+function renderChallenge(){
+  const el=document.getElementById('chCard');
+  if(!el) return;
+  clearInterval(chTimer); chTimer=null;
+
+  // 앱을 닫아둔 사이 기한을 넘겼으면 조용히 성공 처리하고 보여준다
+  if(challenge && chElapsedMs()>=chTotalMs()){
+    const finished=challenge.days;
+    chFinishSuccess();
+    el.innerHTML=`<div class="card ch-card done">
+      <div class="ch-cele">🎉</div>
+      <div class="ch-done-t">${finished}일 도전 성공!</div>
+      <div class="ch-done-s">공든 탑이 완성됐습니다.</div>
+      <button class="ch-again" id="chAgain">새 도전 시작</button>
+    </div>`;
+    el.querySelector('#chAgain').onclick=()=>renderChallenge();
+    return;
+  }
+
+  if(!challenge){
+    el.innerHTML=`<div class="card ch-card">
+      <div class="ch-head"><span class="ch-t">🏆 도전</span></div>
+      <div class="ch-idle">기간을 고르면 지금부터 24시간마다 자동으로 하루가 채워집니다.</div>
+      <div class="ch-opts">
+        ${CH_OPTS.map(o=>`<button data-d="${o.d}"><b>${o.d}일</b><span>${o.tag}</span></button>`).join('')}
+      </div>
+      ${chHistBadges()}
+    </div>`;
+    el.querySelectorAll('.ch-opts button').forEach(b=>b.onclick=()=>chStart(+b.dataset.d));
+    return;
+  }
+
+  const pct=Math.min(100, chElapsedMs()/chTotalMs()*100);
+  const dayNum=Math.min(challenge.days, chCompletedDays()+1);
+  const blocksTotal=Math.min(challenge.days, CH_TOWER_MAX);
+  const daysPerBlock=challenge.days/blocksTotal;
+
+  el.innerHTML=`<div class="card ch-card active">
+    <div class="ch-head">
+      <span class="ch-t">${challenge.days}일 도전 · <b>${dayNum}</b>일째</span>
+      <button class="ch-fail" id="chFailBtn">실패</button>
+    </div>
+    <div class="ch-track">
+      <span class="ch-flag">🚩</span>
+      <div class="ch-line"><div class="ch-line-fill" id="chLineFill"></div></div>
+      <span class="ch-flag">🏁</span>
+      <div class="ch-runner" id="chRunner">🏃</div>
+    </div>
+    <div class="ch-pct" id="chPct">0%</div>
+    <div class="ch-tower" id="chTower">
+      ${Array.from({length:blocksTotal}).map(()=>`<div class="ch-block"></div>`).join('')}
+    </div>
+    <div class="ch-sub" id="chSub"></div>
+  </div>`;
+  el.querySelector('#chFailBtn').onclick=chFail;
+
+  const runner=el.querySelector('#chRunner');
+  const line=el.querySelector('#chLineFill');
+  const pctEl=el.querySelector('#chPct');
+  const subEl=el.querySelector('#chSub');
+  const towerEls=[...el.querySelectorAll('.ch-block')];
+
+  const tick=()=>{
+    if(!challenge) return;
+    if(chElapsedMs()>=chTotalMs()){ renderChallenge(); return; }
+    const p=Math.min(100, chElapsedMs()/chTotalMs()*100);
+    runner.style.left=`calc(${p}% - 14px)`;
+    line.style.width=p+'%';
+    pctEl.textContent=Math.floor(p)+'%';
+
+    const nextBlockAt=(Math.floor((chElapsedMs()/CH_DAY_MS)/daysPerBlock)+1)*daysPerBlock*CH_DAY_MS;
+    const remain=Math.max(0, nextBlockAt-chElapsedMs());
+    subEl.textContent = challenge.days===1
+      ? `완료까지 ${fmtDur(chTotalMs()-chElapsedMs())}`
+      : `다음 블록까지 ${fmtDur(remain)}`;
+
+    const progressBlocks=(chElapsedMs()/CH_DAY_MS)/daysPerBlock;
+    const full=Math.floor(progressBlocks);
+    towerEls.forEach((b,i)=>{
+      if(i<full){ b.classList.add('fill'); b.style.setProperty('--fh','100%'); }
+      else if(i===full){ b.classList.add('fill'); b.style.setProperty('--fh', Math.round((progressBlocks-full)*100)+'%'); }
+      else { b.classList.remove('fill'); b.style.setProperty('--fh','0%'); }
+    });
+    if(full!==chLastBlock && full>0 && full<=towerEls.length){
+      towerEls[full-1].classList.add('pop');
+      chLastBlock=full;
+    }
+  };
+  tick();
+  chTimer=setInterval(tick,1000);
 }
 
 /* ================= 공복 타이머 =================
@@ -2989,8 +3215,8 @@ document.querySelectorAll('nav.bottom button').forEach(t=>t.onclick=()=>{
 
 let curTab='today';
 function renderTab(t){
-  if(t!=='today'){ clearInterval(fastTimer); fastTimer=null; }
-  if(t==='today'){ renderMacroCard(); renderFastCard(); renderSleep();
+  if(t!=='today'){ clearInterval(fastTimer); fastTimer=null; clearInterval(chTimer); chTimer=null; }
+  if(t==='today'){ renderChallenge(); renderMacroCard(); renderFastCard(); renderSleep();
     renderDayEditor(document.getElementById('todayEditor'), TODAY); }
   else if(t==='level')   renderLevel();
   else if(t==='records') renderRecords();
