@@ -453,6 +453,43 @@
     transition:.2s; z-index:400; white-space:nowrap;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
+  /* ===== 스위치온 다이어트 ===== */
+  .sw-idle{display:flex; align-items:center; gap:var(--s3); padding:var(--s3) var(--s4);}
+  .sw-idle-tx{flex:1; font-size:var(--t-cap); color:var(--muted); line-height:1.5;}
+  .sw-start{flex:none; background:var(--acc); color:#fff; font-weight:800;
+    font-size:var(--t-cap); padding:var(--s2) var(--s3); border-radius:var(--r-sm);}
+  .sw-card{width:100%; text-align:left; display:block; padding:var(--s4) var(--s4) var(--s3);}
+  .sw-top{display:flex; align-items:baseline; margin-bottom:var(--s2);}
+  .sw-week{flex:1; font-size:var(--t-cap); font-weight:800; color:var(--muted);}
+  .sw-day{font-family:var(--mono); font-size:var(--t-md); font-weight:800; color:var(--acc);}
+  .sw-day em{font-style:normal; font-size:var(--t-cap); color:var(--dim); font-weight:600;}
+  .sw-bar{height:5px; border-radius:var(--r-xs); background:var(--raise); overflow:hidden;
+    margin-bottom:var(--s3);}
+  .sw-bar-fill{height:100%; background:linear-gradient(90deg,#7FD3A0,#24BE5C);
+    border-radius:var(--r-xs); transition:width .5s ease;}
+  .sw-meals{display:grid; grid-template-columns:repeat(4,1fr); gap:var(--s2); margin-bottom:var(--s3);}
+  .sw-meal{background:var(--raise); border-radius:var(--r-sm); padding:var(--s2) 2px; text-align:center;}
+  .sw-meal.off{opacity:.45;}
+  .sw-ic{display:block; font-size:var(--t-lg); line-height:1.2;}
+  .sw-lb{display:block; font-size:var(--t-micro); color:var(--muted); font-weight:700; margin-top:2px;}
+  .sw-more{font-size:var(--t-cap); color:var(--dim); font-weight:600;}
+
+  .sw-dlg{max-width:360px; max-height:88vh; overflow-y:auto;}
+  .sw-today-meals{margin-bottom:var(--s3);}
+  .sw-meal-row{display:flex; align-items:center; gap:var(--s2); padding:var(--s2) 0;
+    border-bottom:.5px solid var(--border);}
+  .sw-meal-row:last-child{border-bottom:none;}
+  .sw-meal-row.off{opacity:.5;}
+  .sw-meal-row .sw-ic{font-size:var(--t-md);}
+  .sw-mlabel{flex:none; width:36px; font-size:var(--t-cap); font-weight:700; color:var(--muted);}
+  .sw-mval{flex:1; font-size:var(--t-sm); font-weight:700;}
+  .sw-sec{font-size:var(--t-cap); font-weight:800; color:var(--muted); margin:var(--s3) 0 var(--s1);}
+  .sw-txt{font-size:var(--t-sm); color:var(--text); line-height:1.6;}
+  .sw-rules{display:flex; flex-direction:column; gap:var(--s1); margin-top:var(--s1);}
+  .sw-rule{font-size:var(--t-cap); color:var(--muted); line-height:1.5; padding-left:var(--s3);
+    position:relative;}
+  .sw-rule::before{content:'·'; position:absolute; left:2px; color:var(--dim); font-weight:800;}
+
   /* ===== 도전 ===== */
   .ch-card{padding:16px 15px 15px;}
   .ch-head{display:flex; align-items:center; margin-bottom:11px;}
@@ -780,6 +817,7 @@
 <main>
   <div class="page on" id="p-today">
     <div id="chCard"></div>
+    <div id="switchCard"></div>
     <div id="fastHist"></div>
     <div id="fastCard"></div>
     <div id="macroCard"></div>
@@ -2557,7 +2595,7 @@ async function ghBackup(manual){
     }
     if(up){ jSet(K_MEAL,meals); jSet('wl-motiv',motiv); }
     saveSynced();
-    const manifest={updated:new Date().toISOString(), prof, log, tasks, fastHist, sleeps, challenge, chHist, monthAdj,
+    const manifest={updated:new Date().toISOString(), prof, log, tasks, fastHist, sleeps, challenge, chHist, monthAdj, swState,
       meals:meals.map(m=>({id:m.id,d:m.d,slot:m.slot,memo:m.memo,key:m.key||null,url:m.url||null,nut:m.nut||null,rawPaste:m.rawPaste||null,fasted:!!m.fasted})),
       motiv:motiv.map(v=>({id:v.id,d:v.d,note:v.note||'',url:v.url||'',
         media:mvMedia(v).map(md=>({key:md.key,type:md.type,remote:md.remote||null}))}))};
@@ -2636,6 +2674,7 @@ async function ghPull(manual){
     (man.chHist||[]).forEach(x=>{ if(!haveCh.has(x.start)){ chHist.push(x); added++; } });
     chHist.sort((a,b)=>b.start-a.start); jSet('wl-challenge-hist',chHist);
     if(man.monthAdj){ monthAdj={...man.monthAdj, ...monthAdj}; jSet('wl-month-adj',monthAdj); }
+    if(!swState && man.swState){ swState=man.swState; jSet('wl-switchon',swState); added++; }
     if(manual) toast(added? `⬇ ${added}개 불러옴` : '기기 기록이 이미 서버와 같습니다');
     // 방금 서버에서 받아온 내용이므로 되쓰기(백업)를 걸지 않는다
     onDataChanged({backup:false});
@@ -2756,6 +2795,191 @@ function chHistSheet(idx){
       jSet('wl-challenge-hist',chHist); ov.remove(); renderChallenge(); toast('저장됨');
       return;
     }
+    const r=e.target.dataset&&e.target.dataset.r;
+    if(r==='n'||e.target===ov) ov.remove();
+  });
+  showOverlay(ov);
+}
+
+/* ================= 스위치온 다이어트 =================
+   박용우 박사 프로그램 28일을 그대로 데이터로 옮긴 것.
+   시작한 날을 1일차로 잡고(요일 고정 안 함), 그 뒤로 요일 간격만 유지한다.
+   새 기능을 만들지 않고 기존 체크리스트·공복 타이머를 그대로 불러 쓴다. */
+const SW_MEAL_ICON={'단백질 쉐이크':'🥤','밥+채소+단백질':'🍚','채소+단백질':'🥗','일반식':'🍽️','－':'🌙'};
+// [아침,점심,간식,저녁] × 28일. 원문 표를 그대로 옮김('－'=그 끼니 공복)
+const SW_PLAN=[
+ // 1주차
+ ['단백질 쉐이크','단백질 쉐이크','단백질 쉐이크','단백질 쉐이크'],
+ ['단백질 쉐이크','단백질 쉐이크','단백질 쉐이크','단백질 쉐이크'],
+ ['단백질 쉐이크','단백질 쉐이크','단백질 쉐이크','단백질 쉐이크'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','단백질 쉐이크'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','단백질 쉐이크'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','단백질 쉐이크'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','단백질 쉐이크'],
+ // 2주차 (수요일=8일차 저녁 공복 시작 → 9일차 하루 공복)
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','채소+단백질'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','채소+단백질'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','－'],
+ ['－','－','－','채소+단백질'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','채소+단백질'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','채소+단백질'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','채소+단백질'],
+ // 3주차 (단식 2회: 화요일 저녁→수요일 저녁, 목요일 저녁→금요일... 원문 표 그대로)
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','－'],
+ ['－','－','－','채소+단백질'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','－'],
+ ['－','－','－','채소+단백질'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','채소+단백질'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','채소+단백질'],
+ ['단백질 쉐이크','밥+채소+단백질','단백질 쉐이크','채소+단백질'],
+ // 4주차 (단식 3회, 점심이 일반식으로 풀림)
+ ['단백질 쉐이크','일반식','단백질 쉐이크','－'],
+ ['－','－','－','밥+채소+단백질'],
+ ['단백질 쉐이크','일반식','단백질 쉐이크','－'],
+ ['－','－','－','밥+채소+단백질'],
+ ['단백질 쉐이크','일반식','단백질 쉐이크','－'],
+ ['－','－','－','밥+채소+단백질'],
+ ['단백질 쉐이크','일반식','단백질 쉐이크','밥+채소+단백질'],
+];
+const SW_WEEKS=[
+  {allow:'채소, 두부, 요거트 (1~3일) → 4일차부터 +해조류·버섯·달걀·생선·닭/돼지/소 살코기',
+   note:'금단증상(두통·무력감) 나타나면 4일차로 바로 넘어가도 됩니다.'},
+  {allow:'채소, 두부, 플레인요거트, 해조류, 버섯, 달걀, 생선, 살코기',
+   note:'24시간 간헐적 단식 주 1회.'},
+  {allow:'+콩류, 견과류 한줌',
+   note:'24시간 간헐적 단식 주 2회 (연속 X).'},
+  {allow:'+단호박, 토마토, 베리류, 바나나 하루 1개, 고구마 하루 1개, 저지방 소고기',
+   note:'24시간 간헐적 단식 주 3회 (연속 X). 점심이 일반식으로 풀립니다.'},
+];
+const SW_RULES=[
+  '아침식사는 전날 저녁식사를 마친 시간으로부터 14시간 후에 섭취',
+  '저녁식사는 취침 2~4시간 전에 끝내기',
+  '수면시간은 하루 7~8시간 유지',
+  '자정부터 새벽 4시는 반드시 수면시간에 포함',
+  '규칙적인 운동 (주4회 이상 · 고강도 인터벌 15~30분)',
+  '오래 앉아있지 않기 — 1시간마다 일어나서 가볍게 움직이기',
+  '물은 하루 8컵 이상',
+  '금기음식: 술, 밀가루, 당류',
+  '카페인 음료 금지 (2주차부터 오전 아메리카노 허용)',
+  '영양제 섭취 (유산균·비타민 등)',
+];
+const SW_TOTAL=SW_PLAN.length;
+
+let swState=jGet('wl-switchon', null);   // {start: dateKey}
+function swDayIndex(dateKey){
+  if(!swState) return null;
+  const diff=Math.round((parseD(dateKey)-parseD(swState.start))/86400000);
+  return (diff>=0 && diff<SW_TOTAL) ? diff : null;
+}
+function swTodayIndex(){ return swDayIndex(TODAY); }
+function swWeekOf(i){ return Math.floor(i/7); }
+
+function swStart(){
+  swState={start:TODAY};
+  jSet('wl-switchon', swState);
+  toast('스위치온 다이어트 시작 · 1일차');
+  renderSwitchCard();
+}
+function swStop(reason){
+  swState=null; jSet('wl-switchon', null);
+  toast(reason||'스위치온 다이어트 종료');
+  renderSwitchCard();
+}
+
+/* 오늘 끼니 아이콘 4개 + 공복이면 타이머로 바로 연결 */
+function renderSwitchCard(){
+  const el=document.getElementById('switchCard');
+  if(!el) return;
+  const idx=swTodayIndex();
+
+  if(!swState || idx===null){
+    el.innerHTML=`<div class="sec-t">스위치온 다이어트</div>
+      <div class="card quiet sw-idle">
+        <div class="sw-idle-tx">박용우 박사 28일 프로그램. 시작하면 오늘이 1일차가 됩니다.</div>
+        <button class="sw-start" id="swStartBtn">시작하기</button>
+      </div>`;
+    el.querySelector('#swStartBtn').onclick=swStart;
+    return;
+  }
+
+  const week=swWeekOf(idx);
+  const meals=SW_PLAN[idx];
+  const labels=['아침','점심','간식','저녁'];
+  const pct=Math.round((idx+1)/SW_TOTAL*100);
+  // 저녁만 '－'면 오늘 저녁부터 24시간 단식을 "시작"하는 날.
+  // 아침·점심·간식까지 전부 '－'면 어제 저녁부터 이어져온 단식 중이라 새로 시작할 게 없다.
+  const hasFastToday = meals.some(m=>m==='－');
+  const canStartFast = meals[3]==='－' && meals.slice(0,3).some(m=>m!=='－');
+
+  el.innerHTML=`<div class="sec-t">스위치온 다이어트</div>
+    <button class="card lift sw-card" id="swOpen">
+      <div class="sw-top">
+        <span class="sw-week">${week+1}주차</span>
+        <span class="sw-day">Day ${idx+1}<em>/${SW_TOTAL}</em></span>
+      </div>
+      <div class="sw-bar"><div class="sw-bar-fill" style="width:${pct}%"></div></div>
+      <div class="sw-meals">
+        ${meals.map((m,i)=>`<div class="sw-meal${m==='－'?' off':''}">
+          <span class="sw-ic">${SW_MEAL_ICON[m]}</span><span class="sw-lb">${labels[i]}</span></div>`).join('')}
+      </div>
+      <span class="sw-more">${hasFastToday?'오늘은 공복 관련일 · 규칙·체크리스트 보기 ›':'자세히 · 이번 주 허용식품 ›'}</span>
+    </button>`;
+  el.querySelector('#swOpen').onclick=swSheet;
+}
+
+function swAddChecklist(){
+  const before=tasks.length;
+  SW_RULES.forEach(r=>{
+    if(!tasks.some(t=>t.text===r)) tasks.push({id:'sw'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), text:r});
+  });
+  jSet(K_TASK, tasks);
+  const added=tasks.length-before;
+  toast(added? `체크리스트에 ${added}개 추가됨` : '이미 전부 추가돼 있습니다');
+  onDataChanged();
+}
+
+function swSheet(){
+  const idx=swTodayIndex();
+  const week=swWeekOf(idx);
+  const w=SW_WEEKS[week];
+  const meals=SW_PLAN[idx];
+  const labels=['아침','점심','간식','저녁'];
+  const canStartFast = meals[3]==='－' && meals.slice(0,3).some(m=>m!=='－');
+
+  const ov=document.createElement('div'); ov.className='ov';
+  ov.innerHTML=`<div class="dlg sw-dlg">
+    <div class="dlg-t">${week+1}주차 · Day ${idx+1}/${SW_TOTAL}</div>
+
+    <div class="sw-today-meals">
+      ${meals.map((m,i)=>`<div class="sw-meal-row${m==='－'?' off':''}">
+        <span class="sw-ic">${SW_MEAL_ICON[m]}</span>
+        <span class="sw-mlabel">${labels[i]}</span>
+        <span class="sw-mval">${m}</span></div>`).join('')}
+    </div>
+    ${canStartFast && !fastState? `<button class="dlg-b p" id="swFastBtn" style="width:100%;margin-bottom:14px">🕐 오늘 저녁부터 공복 — 타이머 시작</button>` : ''}
+
+    <div class="sw-sec">이번 주 허용 식품</div>
+    <div class="sw-txt">${w.allow}</div>
+    <div class="sw-sec">참고</div>
+    <div class="sw-txt">${w.note}</div>
+
+    <div class="sw-sec">꼭 지켜야 할 규칙</div>
+    <div class="sw-rules">${SW_RULES.map(r=>`<div class="sw-rule">${r}</div>`).join('')}</div>
+    <button class="dlg-b" id="swChkBtn" style="width:100%;margin-top:8px">체크리스트에 10개 추가</button>
+
+    <div class="dlg-btns">
+      <button class="dlg-b" id="swQuit" style="color:var(--red)">중단</button>
+      <button class="dlg-b p" data-r="n">닫기</button>
+    </div>
+  </div>`;
+  const fb=ov.querySelector('#swFastBtn');
+  if(fb) fb.onclick=()=>{ fastStart(); ov.remove(); renderFastCard(); };
+  ov.querySelector('#swChkBtn').onclick=swAddChecklist;
+  ov.querySelector('#swQuit').onclick=()=>{
+    ov.remove();
+    ask('스위치온 다이어트를 중단할까요? 진행 상황은 초기화됩니다.', ()=>swStop('중단됨'));
+  };
+  ov.addEventListener('click',e=>{
     const r=e.target.dataset&&e.target.dataset.r;
     if(r==='n'||e.target===ov) ov.remove();
   });
@@ -3425,7 +3649,7 @@ document.querySelectorAll('nav.bottom button').forEach(t=>t.onclick=()=>{
 let curTab='today';
 function renderTab(t){
   if(t!=='today'){ clearInterval(fastTimer); fastTimer=null; clearInterval(chTimer); chTimer=null; }
-  if(t==='today'){ renderChallenge(); renderMacroCard(); renderFastCard(); renderSleep();
+  if(t==='today'){ renderChallenge(); renderSwitchCard(); renderMacroCard(); renderFastCard(); renderSleep();
     renderDayEditor(document.getElementById('todayEditor'), TODAY); }
   else if(t==='level')   renderLevel();
   else if(t==='records') renderRecords();
