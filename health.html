@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>체중관리</title>
@@ -1043,9 +1043,9 @@ function exSheet(dayObj, dateKey, name, base, onChange){
   ov.innerHTML=`<div class="dlg">
     <div class="dlg-t">${slotLabel} · ${name}</div>
     <div class="fld" style="margin-bottom:12px"><label>운동 시간 (분)</label>
-      <input id="xMin" type="number" inputmode="numeric" value="${cur?cur.min:''}" placeholder="45"></div>
+      <input id="xMin" type="text" pattern="[0-9]*" inputmode="numeric" value="${cur?cur.min:''}" placeholder="45"></div>
     ${isRun?`<div class="fld" style="margin-bottom:12px"><label>달린 거리 (km) — 선택</label>
-      <input id="xDist" type="number" inputmode="decimal" step="0.1" value="${cur&&cur.dist?cur.dist:''}" placeholder="비우면 강도로 계산"></div>`:''}
+      <input id="xDist" type="text" pattern="[0-9]*\.?[0-9]*" inputmode="decimal" step="0.1" value="${cur&&cur.dist?cur.dist:''}" placeholder="비우면 강도로 계산"></div>`:''}
     <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">강도</label>
     <div class="lv-seg" id="xLv">
       ${LEVEL_LABEL.map((l,i)=>`<button data-l="${i}" class="${(cur?cur.level:1)===i?'on':''}">${l}</button>`).join('')}
@@ -1244,7 +1244,7 @@ function monthAdjSheet(name){
     <div style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-bottom:12px">
       실제 기록에 없는 날을 더하거나 뺄 수 있습니다. 오늘 탭의 하루 기록 자체는 바뀌지 않습니다.</div>
     <div class="fld" style="margin-bottom:14px"><label>이번 달 ${name}</label>
-      <input id="maN" type="number" inputmode="numeric" value="${cur}"></div>
+      <input id="maN" type="text" pattern="[0-9]*" inputmode="numeric" value="${cur}"></div>
     <div class="dlg-btns"><button class="dlg-b" data-r="n">취소</button>
       <button class="dlg-b p" data-r="y">저장</button></div>
   </div>`;
@@ -1364,7 +1364,7 @@ function renderDayEditor(container, dateKey){
       <span class="sub">${isToday?'오늘':shortD(dateKey)+' 기록'}</span>
     </div>
     <div class="w-row">
-      <div class="fld"><label>체중 kg</label><input class="inW" type="number" inputmode="decimal" step="0.1" placeholder="0.0" value="${d.w!=null?d.w:''}"></div>
+      <div class="fld"><label>체중 kg</label><input class="inW" type="text" pattern="[0-9]*\.?[0-9]*" inputmode="decimal" step="0.1" placeholder="0.0" value="${d.w!=null?d.w:''}"></div>
       <button class="save-btn">체중 기록</button>
     </div>`;
   wc.querySelector('.save-btn').onclick=()=>{
@@ -2551,6 +2551,16 @@ function ghAutoBackupSoon(){
   clearTimeout(ghTimer); ghTimer=setTimeout(()=>ghBackup(false),1200);
 }
 // 네트워크가 돌아오거나 앱으로 되돌아오면 밀린 저장을 마저 올린다
+/* 홈 화면에 추가한 iOS 웹앱에서 입력칸을 눌러도 키보드가 안 뜨는 경우가 있다
+   (애플 자체 WebKit 버그 — Wordle·인스타그램 등에서도 보고됨, iOS 18까지도 미해결).
+   탭했는데 실제로 포커스가 안 잡혔으면 한 번 더 강제로 잡아준다. */
+document.addEventListener('touchend', e=>{
+  const t=e.target;
+  if((t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement) && document.activeElement!==t){
+    setTimeout(()=>t.focus(),0);
+  }
+}, {passive:true});
+
 window.addEventListener('online',()=>{ if(ghPending||ghFail) ghBackup(false); });
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden && (ghPending||ghFail)) ghBackup(false);
@@ -2762,9 +2772,9 @@ function chHistSheet(idx){
   ov.innerHTML=`<div class="dlg">
     <div class="dlg-t">${editing?'도전 기록 수정':'도전 기록 추가'}</div>
     <div class="fld" style="margin-bottom:12px"><label>목표 일수</label>
-      <input id="chD" type="number" inputmode="numeric" value="${cur.days}" placeholder="14"></div>
+      <input id="chD" type="text" pattern="[0-9]*" inputmode="numeric" value="${cur.days}" placeholder="14"></div>
     <div class="fld" style="margin-bottom:12px"><label>실제 채운 일수</label>
-      <input id="chC" type="number" inputmode="numeric" value="${cur.completedDays}" placeholder="14"></div>
+      <input id="chC" type="text" pattern="[0-9]*" inputmode="numeric" value="${cur.completedDays}" placeholder="14"></div>
     <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">결과</label>
     <div class="lv-seg" id="chRes" style="margin-bottom:14px">
       <button data-r="success" class="${cur.result==='success'?'on':''}">성공</button>
@@ -3509,15 +3519,15 @@ function calcSheet(){
       <button data-s="m">남성</button><button data-s="f">여성</button></div>
     <div class="row" style="display:flex;gap:8px;margin-bottom:10px">
       <div class="fld"><label>나이</label>
-        <input id="cAge" type="number" inputmode="numeric" value="${cur.age}" placeholder="40"></div>
+        <input id="cAge" type="text" pattern="[0-9]*" inputmode="numeric" value="${cur.age}" placeholder="40"></div>
       <div class="fld"><label>키 cm</label>
-        <input id="cH" type="number" inputmode="decimal" value="${cur.height}" placeholder="175"></div>
+        <input id="cH" type="text" pattern="[0-9]*\.?[0-9]*" inputmode="decimal" value="${cur.height}" placeholder="175"></div>
     </div>
     <div class="row" style="display:flex;gap:8px;margin-bottom:12px">
       <div class="fld"><label>현재 체중 kg</label>
-        <input id="cW" type="number" inputmode="decimal" step="0.1" value="${cur.weight}" placeholder="0.0"></div>
+        <input id="cW" type="text" pattern="[0-9]*\.?[0-9]*" inputmode="decimal" step="0.1" value="${cur.weight}" placeholder="0.0"></div>
       <div class="fld"><label>목표 체중 kg</label>
-        <input id="cGW" type="number" inputmode="decimal" step="0.1" value="${cur.goalWeight}" placeholder="0.0"></div>
+        <input id="cGW" type="text" pattern="[0-9]*\.?[0-9]*" inputmode="decimal" step="0.1" value="${cur.goalWeight}" placeholder="0.0"></div>
     </div>
     <label class="cal-lbl">활동량</label>
     <div class="act-seg" id="cAct">
@@ -3595,9 +3605,9 @@ document.getElementById('setBtn').onclick=()=>{
   ov.innerHTML=`<div class="dlg">
     <div class="dlg-t">목표 설정</div>
     <div class="fld" style="margin-bottom:10px"><label>시작 체중 kg</label>
-      <input id="sS" type="number" inputmode="decimal" step="0.1" value="${prof.start??''}" placeholder="0.0"></div>
+      <input id="sS" type="text" pattern="[0-9]*\.?[0-9]*" inputmode="decimal" step="0.1" value="${prof.start??''}" placeholder="0.0"></div>
     <div class="fld"><label>목표 체중 kg</label>
-      <input id="sG" type="number" inputmode="decimal" step="0.1" value="${prof.goal??''}" placeholder="0.0"></div>
+      <input id="sG" type="text" pattern="[0-9]*\.?[0-9]*" inputmode="decimal" step="0.1" value="${prof.goal??''}" placeholder="0.0"></div>
     <div style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:11px">
       목표 체중과 감량 속도는 건강 상태에 따라 다릅니다. 주치의와 정한 숫자를 넣으세요.<br>
       시작~목표 구간을 10단계로 나눠 레벨이 올라갑니다.</div>
